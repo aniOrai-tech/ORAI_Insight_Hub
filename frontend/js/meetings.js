@@ -12,6 +12,16 @@ async function renderMeetings(container) {
         <div class="section-title">Meetings Tracker</div>
         <div class="section-sub">Consolidated view of all scheduled calendar events and completed Teams recordings.</div>
       </div>
+      <div style="display:flex; align-items:center; gap:12px">
+        <div id="teams-status-badge" style="display:flex; align-items:center; gap:6px; font-size:0.75rem; background:var(--bg-body); padding:4px 10px; border-radius:20px; border:1px solid var(--border)">
+          <span class="pulse-indicator" style="width:8px; height:8px; border-radius:50%; background:var(--text-muted)"></span>
+          <span style="color:var(--text-muted)">Checking Teams...</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="window.open('/teams-auth/login', '_blank')" title="Connect Microsoft Teams">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span>Connect Teams</span>
+        </button>
+      </div>
       <div class="header-actions">
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
@@ -65,7 +75,7 @@ async function renderMeetings(container) {
             <option value="active">Active</option>
             <option value="expired">Expired</option>
           </select>
-          <input type="text" class="search-input" placeholder="Search meetings..." oninput="searchMeetings(this.value)" />
+          <input type="text" class="search-input" placeholder="Search meetings..." data-module="Meetings" oninput="SearchManager.search('Meetings', this.value, loadMeetings)" />
         </div>
       </div>
       <div class="table-container">
@@ -84,7 +94,7 @@ async function renderMeetings(container) {
 
 
           </thead>
-          <tbody id="meetings-tbody">
+          <tbody id="meetings-list">
             <tr><td colspan="7"><div class="empty-table"><p>Loading...</p></div></td></tr>
           </tbody>
         </table>
@@ -93,19 +103,62 @@ async function renderMeetings(container) {
     </div>
   `;
 
-  await loadMeetings();
+  await Promise.all([
+    loadMeetings(),
+    checkTeamsStatus()
+  ]);
 }
 
-async function loadMeetings(params = {}) {
-  const res = await api.meetings.list({ page: meetingsPage, limit: 15, ...params });
-  if (!res.ok) { toast('Failed to load meetings', 'error'); return; }
+async function checkTeamsStatus() {
+  const badge = document.getElementById('teams-status-badge');
+  if (!badge) return;
 
-  meetingsData = res.data.data;
-  renderRecentMeetings(meetingsData.slice(0, 5));
-  renderMeetingsTable(meetingsData);
-  renderPagination('meetings-pagination', res.data.pagination, (p) => {
-    meetingsPage = p; loadMeetings(params);
-  });
+  const res = await api.get('/meetings/sync-status'); // New endpoint needed
+  if (res.ok && res.data.authenticated) {
+    badge.innerHTML = `
+      <span style="width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green)"></span>
+      <span style="color:var(--green); font-weight:600">Teams Connected</span>
+    `;
+  } else {
+    badge.innerHTML = `
+      <span style="width:8px; height:8px; border-radius:50%; background:var(--red)"></span>
+      <span style="color:var(--text-muted)">Teams Disconnected</span>
+    `;
+  }
+}
+
+async function loadMeetings(options = {}) {
+  const params = { page: meetingsPage, limit: 15, ...options };
+  const res = await api.meetings.list(params);
+  
+  const tbody = document.getElementById('meetings-list');
+  const recentSection = document.getElementById('recent-meetings-list')?.closest('.charts-grid');
+
+  if (res.ok) {
+    meetingsData = res.data.data;
+    
+    // Hide recent records if searching
+    if (params.search && recentSection) {
+      recentSection.style.display = 'none';
+    } else if (recentSection) {
+      recentSection.style.display = 'grid';
+      renderRecentMeetings(meetingsData.slice(0, 5));
+    }
+
+    if (meetingsData.length === 0 && params.search) {
+      SearchManager.renderEmptyState('Meetings', 'meetings-list');
+    } else {
+      renderMeetingsTable(meetingsData);
+    }
+    
+    renderPagination('meetings-pagination', res.data.pagination, (p) => {
+      meetingsPage = p; 
+      loadMeetings({ ...options, page: p });
+    });
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 function renderRecentMeetings(meetings) {
@@ -132,12 +185,11 @@ function renderRecentMeetings(meetings) {
 }
 
 function renderMeetingsTable(meetings) {
-  const tbody = document.getElementById('meetings-tbody');
+  const tbody = document.getElementById('meetings-list');
   if (!tbody) return;
 
   if (!meetings.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-table">
-      ${iconCalendar()}<p>No meetings found. Add your first meeting!</p></div></td></tr>`;
+    SearchManager.renderEmptyState('Meetings', 'meetings-list');
     return;
   }
 
@@ -150,9 +202,9 @@ function renderMeetingsTable(meetings) {
       if (m.endTime) {
         const et = new Date(m.endTime);
         const etStr = et.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-        timeStr = `🕐 ${stStr} — ${etStr}`;
+        timeStr = `🕒 ${stStr} \u2014 ${etStr}`;
       } else {
-        timeStr = `🕐 ${stStr}`;
+        timeStr = `🕒 ${stStr}`;
       }
     }
 
@@ -173,7 +225,7 @@ function renderMeetingsTable(meetings) {
           </div>
         </div>
       </td>
-      <td>${m.clientName || '—'}</td>
+      <td>${m.clientName || '\u2014'}</td>
       <td>${formatDate(m.scheduledDate)}</td>
       <td>${formatDate(m.expiryDate)}<br>${expiryBadge(m.expiryDate)}</td>
       <td>${statusBadge(m.status)}</td>
@@ -210,7 +262,7 @@ function openMeetingForm(meeting = null) {
       <div class="form-grid">
         <div class="field full">
           <label>Meeting Header *</label>
-          <input type="text" name="header" required placeholder="e.g. Q4 Strategy Review — Acme Corp" value="${isEdit ? meeting.header : ''}" />
+          <input type="text" name="header" required placeholder="e.g. Q4 Strategy Review \u2014 Acme Corp" value="${isEdit ? meeting.header : ''}" />
         </div>
         <div class="field full">
           <label>Meeting Title / Subject</label>
@@ -367,14 +419,14 @@ async function viewMeeting(id) {
   if (!meeting) return;
 
   // Format time range
-  let timeRangeStr = '—';
+  let timeRangeStr = '\u2014';
   if (meeting.startTime) {
     const st = new Date(meeting.startTime);
     const stStr = st.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     if (meeting.endTime) {
       const et = new Date(meeting.endTime);
       const etStr = et.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-      timeRangeStr = `${stStr} — ${etStr}`;
+      timeRangeStr = `${stStr} \u2014 ${etStr}`;
     } else {
       timeRangeStr = stStr;
     }
@@ -391,25 +443,30 @@ async function viewMeeting(id) {
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="field"><label>Client</label><div style="color:var(--text-primary)">${meeting.clientName||'—'}</div></div>
+        <div class="field"><label>Client</label><div style="color:var(--text-primary)">${meeting.clientName || '\u2014'}</div></div>
         <div class="field"><label>Scheduled</label><div style="color:var(--text-primary)">${formatDate(meeting.scheduledDate)}</div></div>
         <div class="field"><label>Time</label><div style="color:var(--text-primary)">${timeRangeStr}</div></div>
         <div class="field"><label>Expiry Date</label><div style="color:var(--text-primary)">${formatDate(meeting.expiryDate)}</div></div>
-        <div class="field"><label>Organizer</label><div style="color:var(--text-primary)">${meeting.organizerName || '—'}</div></div>
-        <div class="field"><label>Owner Email</label><div style="color:var(--text-primary)">${meeting.ownerEmail||'—'}</div></div>
-        <div class="field"><label>Location</label><div style="color:var(--text-primary)">${meeting.location || '—'}</div></div>
+        <div class="field"><label>Organizer</label><div style="color:var(--text-primary)">${meeting.organizerName || '\u2014'}</div></div>
+        <div class="field"><label>Owner Email</label><div style="color:var(--text-primary)">${meeting.ownerEmail || '\u2014'}</div></div>
+        <div class="field"><label>Location</label><div style="color:var(--text-primary)">${meeting.location || '\u2014'}</div></div>
         <div class="field"><label>Reminder Sent</label><div>${meeting.reminderSent ? `<span class="badge badge-green">Yes · ${formatDate(meeting.reminderSentAt)}</span>` : '<span class="badge badge-gray">No</span>'}</div></div>
         <div class="field"><label>Recording</label><div>
           ${meeting.recording ? `<a href="/uploads/recordings/${meeting.recording.filename}" target="_blank" class="btn btn-secondary btn-sm" style="margin-bottom:5px;display:inline-block">🎙 Open File</a><br>` : ''}
-          ${meeting.recordingUrl ? `<a href="${meeting.recordingUrl}" target="_blank" class="btn btn-secondary btn-sm" style="color:var(--accent)">🔗 View on Browser</a>` : (meeting.recording ? '' : '—')}
+          ${meeting.recordingUrl ? `<a href="${meeting.recordingUrl}" target="_blank" class="btn btn-secondary btn-sm" style="color:var(--accent)">🔗 View on Browser</a>` : (meeting.recording ? '' : '\u2014')}
         </div></div>
         ${meeting.joinUrl ? `<div class="field"><label>Join URL</label><div><a href="${meeting.joinUrl}" target="_blank" style="color:var(--accent);font-size:0.85rem;word-break:break-all">🔗 Join Meeting</a></div></div>` : ''}
       </div>
-      ${meeting.summary ? `<div class="field"><label>Call Summary</label><div style="color:var(--text-secondary);line-height:1.7;white-space:pre-wrap">${meeting.summary}</div></div>` : ''}
-      ${meeting.transcript ? `<div class="field"><label>Transcript</label><div style="color:var(--text-muted);font-size:0.85rem;max-height:200px;overflow-y:auto;background:var(--bg-input);padding:14px;border-radius:var(--radius);line-height:1.7;white-space:pre-wrap">${meeting.transcript}</div></div>` : ''}
-      <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:8px;border-top:1px solid var(--border)">
+      ${meeting.summary ? `
+        <div class="field full">
+          <label>Meeting Summary / Decisions</label>
+          <div style="color:var(--text-secondary); line-height:1.7; white-space:pre-wrap; background:var(--bg-input); padding:16px; border-radius:12px; border:1px solid var(--border); font-size:0.9rem">
+            ${meeting.summary}
+          </div>
+        </div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--border)">
         <button class="btn btn-secondary" onclick="closeModal()">Close</button>
-        <button class="btn btn-primary" onclick="closeModal();editMeeting('${meeting._id}')">Edit</button>
+        <button class="btn btn-primary" onclick="closeModal();editMeeting('${meeting._id}')">Edit Details</button>
       </div>
     </div>`;
 
@@ -430,7 +487,7 @@ function deleteMeetingConfirm(id, name) {
   });
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// ─── Filtering ────────────────────────────────────────────────────────────
 let meetingFilters = {};
 
 function openMeetingColumnFilter(btn, column) {
@@ -478,18 +535,18 @@ function renderPagination(elId, pagination, onPageChange) {
   const { page, pages } = pagination;
   if (pages <= 1) { el.innerHTML = ''; return; }
 
-  // Store the callback globally so it can be called from the onclick string safely
-  window._currentPaginationCallback = onPageChange;
+  window._paginationCallbacks = window._paginationCallbacks || {};
+  window._paginationCallbacks[elId] = onPageChange;
 
-  let html = `<button class="page-btn" onclick="window._currentPaginationCallback(${page-1})" ${page===1?'disabled':''}>‹</button>`;
+  let html = `<button class="page-btn" onclick="window._paginationCallbacks['${elId}'](${page-1})" ${page===1?'disabled':''}>‹</button>`;
   for (let i = 1; i <= pages; i++) {
     if (i === 1 || i === pages || Math.abs(i - page) <= 1) {
-      html += `<button class="page-btn ${i===page?'active':''}" onclick="window._currentPaginationCallback(${i})">${i}</button>`;
+      html += `<button class="page-btn ${i===page?'active':''}" onclick="window._paginationCallbacks['${elId}'](${i})">${i}</button>`;
     } else if (Math.abs(i - page) === 2) {
       html += `<span style="color:var(--text-muted);padding:0 4px">…</span>`;
     }
   }
-  html += `<button class="page-btn" onclick="window._currentPaginationCallback(${page+1})" ${page===pages?'disabled':''}>›</button>`;
+  html += `<button class="page-btn" onclick="window._paginationCallbacks['${elId}'](${page+1})" ${page===pages?'disabled':''}>›</button>`;
   el.innerHTML = html;
 }
 
@@ -541,4 +598,12 @@ async function enrichManualMeetings() {
   } else {
     toast(res.data?.message || 'Update failed', 'error');
   }
+}
+
+function searchMeetings(q) {
+  SearchManager.search('Meetings', q, loadMeetings);
+}
+
+function filterMeetings(status) {
+  loadMeetings({ status });
 }

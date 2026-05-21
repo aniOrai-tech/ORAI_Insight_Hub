@@ -11,7 +11,7 @@
   const CLAUDE_API_URL = "/api/chat";
   const CLAUDE_MODEL = "claude-sonnet-4-20250514";
 
-  // ── PAGE CONTEXT ────────────────────────────────────────────────────────────
+  // ─── PAGE CONTEXT ─────────────────────────────────────────────────────────────
   const PAGE_CONTEXT = {
     default: `You are "${AGENT_NAME}", the AI assistant for the ORAI Insight Hub dashboard.
 You are made by ORAI Robotics. You help users navigate the dashboard, understand features, and answer common questions.
@@ -47,7 +47,7 @@ Key features: WhatsApp Business Account login details, QR code status.`,
 Key features: User management, role assignment, system settings.`,
   };
 
-  // ── DASHBOARD DATA FOR CONTEXT ──────────────────────────────────────────────
+  // ─── DASHBOARD DATA FOR CONTEXT ───────────────────────────────────────────────
   function getDashboardData() {
     let data = {
       user: {
@@ -91,11 +91,11 @@ Key features: User management, role assignment, system settings.`,
     return `${context}\n\nCURRENT DASHBOARD DATA (JSON):\n${dataContext}\n\nImportant: Use this data to answer specific questions about accounts, IDs, login credentials, and meetings accurately. If asked for login details or account ID, refer to the 'accountId' field in the bots data. Always be helpful and proactive.`;
   }
 
-  // ── STATE ───────────────────────────────────────────────────────────────────
+  // ─── STATE ───────────────────────────────────────────────────────────────────
   let isLoading = false;
   const history = [];
 
-  // ── INJECT STYLES ───────────────────────────────────────────────────────────
+  // ─── INJECT STYLES ───────────────────────────────────────────────────────────
   const style = document.createElement("style");
   style.textContent = `
     #aw-root * { box-sizing: border-box; font-family: -apple-system, 'Segoe UI', sans-serif; margin: 0; padding: 0; }
@@ -248,7 +248,7 @@ Key features: User management, role assignment, system settings.`,
   `;
   document.head.appendChild(style);
 
-  // ── HELPER FUNCTIONS ────────────────────────────────────────────────────────
+  // ─── HELPER FUNCTIONS ─────────────────────────────────────────────────────────
   function escapeHtml(text) {
     return text
       .replace(/&/g, "&amp;")
@@ -274,7 +274,7 @@ Key features: User management, role assignment, system settings.`,
     const wrapper = document.createElement("div");
     wrapper.className = `aw-msg ${role}`;
     if (role === "bot") {
-      wrapper.innerHTML = `<div class="aw-avatar-sm">✦</div><div class="aw-bubble-inner">${formatText(text)}</div>`;
+      wrapper.innerHTML = `<div class="aw-avatar-sm">\u2726</div><div class="aw-bubble-inner">${formatText(text)}</div>`;
     } else {
       wrapper.innerHTML = `<div class="aw-bubble-inner">${escapeHtml(text)}</div>`;
     }
@@ -288,7 +288,7 @@ Key features: User management, role assignment, system settings.`,
     const wrapper = document.createElement("div");
     wrapper.className = "aw-msg bot";
     wrapper.id = "aw-typing";
-    wrapper.innerHTML = `<div class="aw-avatar-sm">✦</div><div class="aw-bubble-inner aw-typing"><div class="aw-dot"></div><div class="aw-dot"></div><div class="aw-dot"></div></div>`;
+    wrapper.innerHTML = `<div class="aw-avatar-sm">\u2726</div><div class="aw-bubble-inner aw-typing"><div class="aw-dot"></div><div class="aw-dot"></div><div class="aw-dot"></div></div>`;
     msgArea.appendChild(wrapper);
     msgArea.scrollTop = msgArea.scrollHeight;
   }
@@ -298,7 +298,7 @@ Key features: User management, role assignment, system settings.`,
     if (t) t.remove();
   }
 
-  // ── LOCAL DATA SEARCH ──────────────────────────────────────────────────────
+  // ─── LOCAL DATA SEARCH ───────────────────────────────────────────────────────
   function findLocalAnswer(query) {
     const q = query.toLowerCase();
     const bots = window.botsData || [];
@@ -315,7 +315,7 @@ Key features: User management, role assignment, system settings.`,
 - **Account ID:** \`${match.accountId || 'N/A'}\`
 - **WhatsApp Number:** ${match.number || 'N/A'}
 - **API Key:** \`${match.apiKey || 'N/A'}\`
-- **Status:** ${match.isActive ? '✅ Active' : '❌ Inactive'}
+- **Status:** ${match.isActive ? '\u2705 Active' : '\u274C Inactive'}
 - **Integration:** ${match.remark || 'N/A'}`;
       }
       if (q.includes('account id') && !match) {
@@ -345,10 +345,10 @@ Key features: User management, role assignment, system settings.`,
       if (q.includes('client')) return "Client management is located under the **Clients** tab.";
     }
 
-    return null; // No local answer found
+    return null;
   }
 
-  // ── SEND MESSAGE ────────────────────────────────────────────────────────────
+  // ─── SEND MESSAGE ────────────────────────────────────────────────────────────
   async function sendMessage() {
     const input = document.getElementById("aw-input");
     const sendBtn = document.getElementById("aw-send");
@@ -395,7 +395,6 @@ Key features: User management, role assignment, system settings.`,
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        // If API key is missing, give a helpful non-error response
         if (response.status === 500 && (err.error?.message || '').includes('API_KEY')) {
           const fallback = "I'm currently running in **offline mode** because the AI API key is not configured. I can still help you with dashboard data, account IDs, and navigation! Try asking 'What is the account ID for [client name]?'";
           removeTyping();
@@ -415,7 +414,7 @@ Key features: User management, role assignment, system settings.`,
       speakResponse(reply);
     } catch (err) {
       removeTyping();
-      addBubble("bot", `⚠️ Note: ${err.message}. I'm optimized for dashboard data—try asking about specific bots or meetings!`);
+      addBubble("bot", `\u26A0\uFE0F Note: ${err.message}. I'm optimized for dashboard data\u2014try asking about specific bots or meetings!`);
     } finally {
       isLoading = false;
       if (sendBtn) sendBtn.disabled = false;
@@ -423,9 +422,9 @@ Key features: User management, role assignment, system settings.`,
     }
   }
 
+  // Voice output
   function speakResponse(text) {
     if (window.speechSynthesis) {
-      // Stop any current speaking
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text.replace(/[*#`]/g, ''));
       utterance.lang = 'en-IN';
@@ -434,19 +433,19 @@ Key features: User management, role assignment, system settings.`,
     }
   }
 
-  // ── BUILD & INIT ────────────────────────────────────────────────────────────
+  // ─── BUILD & INIT ────────────────────────────────────────────────────────────
   function buildWidget() {
-    if (document.getElementById("aw-root")) return; // already built
+    if (document.getElementById("aw-root")) return;
 
     const root = document.createElement("div");
     root.id = "aw-root";
     root.innerHTML = `
       <div id="aw-bubble">Hi, How can I assist you today?</div>
-      <button id="aw-fab" title="Open ${AGENT_NAME}" aria-label="Open ${AGENT_NAME}">✦</button>
+      <button id="aw-fab" title="Open ${AGENT_NAME}" aria-label="Open ${AGENT_NAME}">\u2726</button>
 
       <div id="aw-panel" role="dialog" aria-label="${AGENT_NAME} Assistant">
         <div id="aw-header">
-          <div class="aw-avatar">✦</div>
+          <div class="aw-avatar">\u2726</div>
           <div class="aw-title">
             <strong>${AGENT_NAME} — ORAI Insight Agent</strong>
             <span>Ask me anything about your dashboard</span>
@@ -467,7 +466,7 @@ Key features: User management, role assignment, system settings.`,
 
         <div id="aw-messages" aria-live="polite">
           <div class="aw-msg bot">
-            <div class="aw-avatar-sm">✦</div>
+            <div class="aw-avatar-sm">\u2726</div>
             <div class="aw-bubble-inner">
               Hi! I'm <strong>${AGENT_NAME}</strong>, your ORAI Insight Agent. I can help you with bot details, meeting info, account IDs, and navigating the dashboard. What can I help you with?
             </div>
@@ -492,7 +491,7 @@ Key features: User management, role assignment, system settings.`,
     `;
     document.body.appendChild(root);
 
-    // ── Wire up events ──
+    // ─── Wire up events ───
     const fab = document.getElementById("aw-fab");
     const panel = document.getElementById("aw-panel");
     const closeBtn = document.getElementById("aw-close");
@@ -512,13 +511,11 @@ Key features: User management, role assignment, system settings.`,
     fab.onclick = () => togglePanel();
     closeBtn.onclick = () => togglePanel(false);
 
-    // Auto-resize textarea
     input.oninput = () => {
       input.style.height = "auto";
       input.style.height = Math.min(input.scrollHeight, 100) + "px";
     };
 
-    // Enter to send
     input.onkeydown = (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -528,7 +525,6 @@ Key features: User management, role assignment, system settings.`,
 
     sendBtn.onclick = () => sendMessage();
 
-    // Quick chips
     chips.forEach(chip => {
       chip.onclick = () => {
         input.value = chip.dataset.q;
@@ -536,7 +532,6 @@ Key features: User management, role assignment, system settings.`,
       };
     });
 
-    // Voice input (On/Off Toggle)
     let recognition = null;
     let isMicOn = false;
 
@@ -556,7 +551,7 @@ Key features: User management, role assignment, system settings.`,
       
       recognition = new SR();
       recognition.lang = 'en-IN';
-      recognition.continuous = false; // We'll manually restart if needed, or keep it simple
+      recognition.continuous = false;
       recognition.interimResults = false;
 
       recognition.onstart = () => {
@@ -569,8 +564,6 @@ Key features: User management, role assignment, system settings.`,
         const transcript = e.results[0][0].transcript;
         input.value = transcript;
         sendMessage();
-        // After sending, we can choose to keep it on or turn off. 
-        // User asked for On/Off button, so let's keep it "On" until they toggle off
       };
 
       recognition.onerror = (e) => {
@@ -579,7 +572,6 @@ Key features: User management, role assignment, system settings.`,
       };
 
       recognition.onend = () => {
-        // Restart if it's still supposed to be "On"
         if (isMicOn) {
           try { recognition.start(); } catch(e) { stopRecognition(); }
         }
@@ -596,11 +588,10 @@ Key features: User management, role assignment, system settings.`,
       }
     };
 
-    // Expose globals
     window.toggleAIPanel = togglePanel;
   }
 
-  // ── GLOBAL API ──────────────────────────────────────────────────────────────
+  // ─── GLOBAL API ──────────────────────────────────────────────────────────────
   window.askAIAgent = (text) => {
     if (!document.getElementById("aw-root")) buildWidget();
     const input = document.getElementById("aw-input");
@@ -619,7 +610,7 @@ Key features: User management, role assignment, system settings.`,
     setTimeout(() => b.classList.remove("show"), 5000);
   };
 
-  // ── INIT ON DOM READY ───────────────────────────────────────────────────────
+  // ─── INIT ON DOM READY ───────────────────────────────────────────────────────
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", buildWidget);
   } else {

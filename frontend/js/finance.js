@@ -93,7 +93,13 @@ async function renderFinanceHome(container) {
   if (invRes.ok) {
     const top = invRes.data.data.slice(0, 5);
     document.getElementById('top-receivables-tbody').innerHTML = top.map(i => `
-      <tr><td>${i.clientName}</td><td class="td-mono">${formatCurrency(i.balanceDue)}</td></tr>
+      <tr>
+        <td>
+          <div style="font-weight:600">${i.clientName}</div>
+          <div style="font-size:0.7rem; color:var(--text-muted)">${i.clientId?.legalName || '—'}</div>
+        </td>
+        <td class="td-mono">${formatCurrency(i.balanceDue)}</td>
+      </tr>
     `).join('') || '<tr><td colspan="2">No pending receivables</td></tr>';
   }
 }
@@ -110,6 +116,7 @@ async function renderFinanceSales(container) {
           <div class="section-sub">Monitor revenue and customer payments</div>
         </div>
         <div class="header-actions">
+           <input type="text" class="search-input" placeholder="Search sales..." data-module="Payments" oninput="SearchManager.search('Payments', this.value, loadSalesPayments)" style="width:240px" />
            <button class="btn btn-primary" onclick="navigateTo('books-invoices')">View Invoices</button>
            <button class="btn btn-secondary" onclick="openInvoiceForm()">+ New Invoice</button>
         </div>
@@ -120,17 +127,27 @@ async function renderFinanceSales(container) {
         <div class="table-container">
            <table class="data-table">
               <thead><tr><th>Date</th><th>Ref#</th><th>Client</th><th>Invoice</th><th>Amount</th></tr></thead>
-              <tbody id="sales-payments-tbody"><tr><td colspan="5">Loading...</td></tr></tbody>
+              <tbody id="finance-payments-list"><tr><td colspan="5">Loading...</td></tr></tbody>
            </table>
         </div>
       </div>
     </div>
-  `;
+    `;
+    loadSalesPayments();
+}
 
-  const res = await api.payments.list();
-  const tbody = document.getElementById('sales-payments-tbody');
-  if (res.ok && res.data.data.length > 0) {
-    tbody.innerHTML = res.data.data.map(p => `
+async function loadSalesPayments(options = {}) {
+  const res = await api.payments.list(options);
+  const tbody = document.getElementById('finance-payments-list');
+  if (!tbody) return;
+
+  if (res.ok) {
+    const payments = res.data.data;
+    if (payments.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Payments', 'finance-payments-list');
+      return;
+    }
+    tbody.innerHTML = payments.map(p => `
       <tr>
         <td>${formatDate(p.paymentDate)}</td>
         <td class="td-mono">${p.paymentId}</td>
@@ -138,9 +155,10 @@ async function renderFinanceSales(container) {
         <td>${p.invoiceNumber}</td>
         <td class="td-mono" style="color:var(--green); font-weight:700">${formatCurrency(p.amount)}</td>
       </tr>
-    `).join('');
+    `).join('') || `<tr><td colspan="5" style="text-align:center;padding:40px">No payments recorded yet.</td></tr>`;
   } else {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:40px">No payments recorded yet.</td></tr>`;
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="5" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
 }
 
@@ -155,6 +173,9 @@ async function renderFinancePayments(container) {
           <div class="section-title">Payments Received</div>
           <div class="section-sub">Detailed log of all client transactions</div>
         </div>
+        <div class="header-actions">
+           <input type="text" class="search-input" placeholder="Search payments..." data-module="Payments" oninput="SearchManager.search('Payments', this.value, loadDetailedPayments)" style="width:240px" />
+        </div>
       </div>
 
       <div class="table-card">
@@ -164,17 +185,28 @@ async function renderFinancePayments(container) {
                 <th>Date</th><th>Payment#</th><th>Customer Name</th><th>Invoice#</th>
                 <th>Mode</th><th>Reference</th><th>Amount</th>
               </tr></thead>
-              <tbody id="payments-log-tbody"><tr><td colspan="7">Loading...</td></tr></tbody>
+              <tbody id="finance-payments-list"><tr><td colspan="7">Loading...</td></tr></tbody>
            </table>
         </div>
       </div>
     </div>
   `;
 
-  const res = await api.payments.list();
-  const tbody = document.getElementById('payments-log-tbody');
-  if (res.ok && res.data.data.length > 0) {
-    tbody.innerHTML = res.data.data.map(p => `
+  await loadDetailedPayments();
+}
+
+async function loadDetailedPayments(options = {}) {
+  const res = await api.payments.list(options);
+  const tbody = document.getElementById('finance-payments-list');
+  if (!tbody) return;
+
+  if (res.ok) {
+    const payments = res.data.data;
+    if (payments.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Payments', 'finance-payments-list');
+      return;
+    }
+    tbody.innerHTML = payments.map(p => `
       <tr>
         <td>${formatDate(p.paymentDate)}</td>
         <td class="td-mono" style="color:var(--accent); font-weight:700">${p.paymentId}</td>
@@ -184,9 +216,10 @@ async function renderFinancePayments(container) {
         <td style="color:var(--text-muted)">${p.transactionId || '—'}</td>
         <td class="td-mono" style="color:var(--green); font-weight:800">${formatCurrency(p.amount)}</td>
       </tr>
-    `).join('');
+    `).join('') || `<tr><td colspan="7" style="text-align:center;padding:40px">No payment records found.</td></tr>`;
   } else {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px">No payment records found.</td></tr>`;
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="7" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
 }
 
@@ -220,7 +253,7 @@ async function renderFinanceInvoices(container) {
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>
             </select>
-            <input type="text" class="search-input" placeholder="Search..." oninput="searchInvoices(this.value)" style="width:240px" />
+            <input type="text" class="search-input" placeholder="Search invoices..." data-module="Invoices" oninput="SearchManager.search('Invoices', this.value, loadInvoices)" style="width:240px" />
           </div>
         </div>
         <div class="table-container">
@@ -229,7 +262,7 @@ async function renderFinanceInvoices(container) {
               <th>Date</th><th>Invoice #</th><th>Client Name</th><th>Status</th>
               <th>Due Date</th><th>Amount</th><th>Balance</th><th>Actions</th>
             </tr></thead>
-            <tbody id="finance-tbody"><tr><td colspan="8"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
+            <tbody id="finance-invoices-list"><tr><td colspan="8"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -239,25 +272,36 @@ async function renderFinanceInvoices(container) {
 }
 
 // Keep the internal methods
-async function loadInvoices(params = {}) {
-  const res = await api.invoices.list(params);
-  if (!res.ok) return;
-  invoicesData = res.data.data;
-  renderInvoicesTable(invoicesData);
+async function loadInvoices(options = {}) {
+  const res = await api.invoices.list(options);
+  if (res.ok) {
+    invoicesData = res.data.data;
+    if (invoicesData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Invoices', 'finance-invoices-list');
+    } else {
+      renderInvoicesTable(invoicesData);
+    }
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    document.getElementById('finance-invoices-list').innerHTML = `<tr><td colspan="8" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 function renderInvoicesTable(invoices) {
-  const tbody = document.getElementById('finance-tbody');
+  const tbody = document.getElementById('finance-invoices-list');
   if (!tbody) return;
   if (!invoices.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-table"><p>No transactions found.</p></div></td></tr>`;
+    SearchManager.renderEmptyState('Invoices', 'finance-invoices-list');
     return;
   }
 
   tbody.innerHTML = invoices.map(i => `<tr>
     <td style="color:var(--text-muted)">${formatDate(i.issueDate)}</td>
     <td class="td-mono" style="color:var(--accent); font-weight:700">${i.invoiceNumber}</td>
-    <td><div style="font-weight:600">${i.clientName}</div></td>
+    <td>
+      <div style="font-weight:600">${i.clientName}</div>
+      <div style="font-size:0.75rem; color:var(--text-muted)">${i.clientId?.legalName || '—'}</div>
+    </td>
     <td>${invoiceStatusBadge(i.status)}</td>
     <td style="color:${i.status==='overdue'?'var(--red)':'inherit'}">${formatDate(i.dueDate)}</td>
     <td class="td-mono" style="font-weight:600">${formatCurrency(i.grandTotal)}</td>
@@ -281,20 +325,66 @@ function setFinanceView(view) {
   else loadInvoices();
 }
 
-async function loadExpenses() {
-  const res = await api.expenses.list();
-  if (!res.ok) return;
-  const tbody = document.getElementById('finance-tbody');
-  tbody.innerHTML = res.data.data.map(ex => `<tr>
-    <td style="color:var(--text-muted)">${formatDate(ex.date)}</td>
-    <td class="td-mono" style="color:var(--accent)">${ex.expenseId}</td>
-    <td><div style="font-weight:600">${ex.description}</div><div style="font-size:0.7rem; color:var(--text-muted)">${ex.vendor || ''}</div></td>
-    <td><span class="badge badge-purple">${ex.category}</span></td>
-    <td>—</td>
-    <td class="td-mono" style="color:var(--red); font-weight:700">${formatCurrency(ex.amount)}</td>
-    <td>—</td>
-    <td><button class="btn btn-ghost btn-icon btn-sm" style="color:var(--red)" onclick="deleteExpenseConfirm('${ex._id}', '${ex.expenseId}')">${iconTrash()}</button></td>
-  </tr>`).join('');
+let financeDebounce = null;
+function searchInvoices(q) {
+  clearTimeout(financeDebounce);
+  financeDebounce = setTimeout(() => loadInvoices({ search: q }), 400);
+}
+
+function searchPayments(q) {
+  clearTimeout(financeDebounce);
+  financeDebounce = setTimeout(async () => {
+    const res = await api.payments.list({ search: q });
+    if (res.ok) {
+      const tbody = document.getElementById('sales-payments-tbody') || document.getElementById('payments-log-tbody') || document.getElementById('finance-tbody');
+      if (tbody) {
+        if (res.data.data.length > 0) {
+          tbody.innerHTML = res.data.data.map(p => `
+            <tr>
+              <td>${formatDate(p.paymentDate)}</td>
+              <td class="td-mono">${p.paymentId}</td>
+              <td style="font-weight:600">${p.clientName}</td>
+              <td>${p.invoiceNumber}</td>
+              <td class="td-mono" style="color:var(--green); font-weight:700">${formatCurrency(p.amount)}</td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px">No payments found.</td></tr>`;
+        }
+      }
+    }
+  }, 400);
+}
+
+function searchExpenses(q) {
+  SearchManager.search('Expenses', q, loadExpenses);
+}
+
+async function loadExpenses(options = {}) {
+  const res = await api.expenses.list(options);
+  const tbody = document.getElementById('finance-expenses-list') || document.getElementById('finance-tbody');
+  if (!tbody) return;
+
+  if (res.ok) {
+    const expenses = res.data.data;
+    if (expenses.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Expenses', tbody.id);
+      return;
+    }
+    tbody.innerHTML = expenses.map(ex => `<tr>
+      <td style="color:var(--text-muted)">${formatDate(ex.date)}</td>
+      <td class="td-mono" style="color:var(--accent)">${ex.expenseId}</td>
+      <td><div style="font-weight:600">${ex.description}</div><div style="font-size:0.7rem; color:var(--text-muted)">${ex.vendor || ''}</div></td>
+      <td><span class="badge badge-purple">${ex.category}</span></td>
+      <td>—</td>
+      <td class="td-mono" style="color:var(--red); font-weight:700">${formatCurrency(ex.amount)}</td>
+      <td>—</td>
+      <td><button class="btn btn-ghost btn-icon btn-sm" style="color:var(--red)" onclick="deleteExpenseConfirm('${ex._id}', '${ex.expenseId}')">${iconTrash()}</button></td>
+    </tr>`).join('') || `<tr><td colspan="8" style="text-align:center;padding:40px">No expenses found.</td></tr>`;
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="8" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 async function loadPayments() {
@@ -376,7 +466,8 @@ async function viewInvoice(id) {
       <div style="display:flex; justify-content:space-between; margin-bottom:30px">
         <div>
           <label style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase">Bill To</label>
-          <div style="font-weight:700; font-size:1.1rem">${i.clientName}</div>
+          <div style="font-weight:700; font-size:1.1rem">${i.clientId?.legalName || i.clientName}</div>
+          <div style="font-size:0.85rem; color:var(--text-secondary)">Brand: ${i.clientName}</div>
           <div style="color:var(--text-secondary)">${i.clientEmail || ''}</div>
         </div>
         <div style="text-align:right">

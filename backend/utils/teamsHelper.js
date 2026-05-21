@@ -88,7 +88,8 @@ function constructSharePointUrl(record, organizerEmail) {
       `/personal/${userSlug}/Documents/Recordings/${subject}-${dateStr}-Meeting Recording.mp4`
     );
 
-    return `https://orairoboticspvtltd-my.sharepoint.com/personal/${userSlug}/_layouts/15/stream.aspx?id=${personalPath}&referrer=Teams.TEAMS-ELECTRON&referrerScenario=RecapOpenInStreamButton.view`;
+    const domain = process.env.SHAREPOINT_DOMAIN || 'orairoboticspvtltd-my.sharepoint.com';
+    return `https://${domain}/personal/${userSlug}/_layouts/15/stream.aspx?id=${personalPath}&referrer=Teams.TEAMS-ELECTRON&referrerScenario=RecapOpenInStreamButton.view`;
   } catch (e) {
     return null;
   }

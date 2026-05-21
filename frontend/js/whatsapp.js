@@ -11,6 +11,7 @@ async function renderWhatsapp(container) {
         <div class="section-sub">Manage WhatsApp Business API credentials and account status</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search accounts..." data-module="WhatsApp" oninput="SearchManager.search('WhatsApp', this.value, loadWhatsappAccounts)" style="width:240px" />
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
           <span>Filters</span>
@@ -56,16 +57,29 @@ async function renderWhatsapp(container) {
   loadWhatsappAccounts();
 }
 
+let whatsappDebounce = null;
+function searchWhatsapp(q) {
+  SearchManager.search('WhatsApp', q, loadWhatsappAccounts);
+}
+
 let whatsappData = [];
 let whatsappFilters = {};
 
-async function loadWhatsappAccounts() {
-  const res = await api.whatsapp.list();
+async function loadWhatsappAccounts(options = {}) {
+  const res = await api.whatsapp.list(options);
+  const tbody = document.getElementById('whatsapp-list');
+  if (!tbody) return;
+
   if (res.ok) {
     whatsappData = res.data.data;
-    renderWhatsappTable(whatsappData);
+    if (whatsappData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('WhatsApp', 'whatsapp-list');
+    } else {
+      renderWhatsappTable(whatsappData);
+    }
   } else {
-    document.getElementById('whatsapp-list').innerHTML = `<tr><td colspan="11" class="error-state">Error: ${res.data.message}</td></tr>`;
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="11" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
 }
 
@@ -73,7 +87,7 @@ function renderWhatsappTable(data) {
   const tbody = document.getElementById('whatsapp-list');
   if (!tbody) return;
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No WhatsApp accounts found.</td></tr>';
+    SearchManager.renderEmptyState('WhatsApp', 'whatsapp-list');
     return;
   }
   tbody.innerHTML = data.map(acc => `
@@ -99,7 +113,7 @@ function renderWhatsappTable(data) {
   `).join('');
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openWhatsappColumnFilter(btn, column) {
   let items = [];
   const isDate = column.toLowerCase().includes('date');

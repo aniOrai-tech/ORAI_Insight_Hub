@@ -5,20 +5,36 @@
 
 const { Bot, Client, Upsell, Requirement } = require('../models/index');
 const { sanitizePayload } = require('../services/mappers/accountMapper');
+const { buildSearchFilter } = require('../utils/queryHelper');
 
 // ─── Generic CRUD factory ─────────────────────────────────────────────────────
 const createCRUD = (Model, resourceName) => ({
   getAll: async (req, res, next) => {
     try {
       const { search, page = 1, limit = 20, ...filters } = req.query;
-      const filter = req.user.role === 'admin' ? { ...filters } : { department: req.user.department, ...filters };
+      
+      // Build base filter (RBAC + manual filters)
+      const isAll = req.path.includes('/all') || req.query.limit > 500;
+      const baseFilter = (req.user.role === 'admin' || isAll) ? { ...filters } : { department: req.user.department, ...filters };
+      
+      // Build search filter
+      const searchFilter = buildSearchFilter(resourceName, search);
+      
+      // Combine them
+      const filter = { ...baseFilter, ...searchFilter };
       
       const total = await Model.countDocuments(filter);
-      const items = await Model.find(filter)
+      const queryExec = Model.find(filter)
         .populate('createdBy', 'username fullName')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit));
+
+      if (resourceName === 'Requirement') {
+        queryExec.populate('clientId', 'companyName legalName spocName');
+      }
+
+      const items = await queryExec;
 
       res.json({
         success: true,
@@ -31,8 +47,14 @@ const createCRUD = (Model, resourceName) => ({
   getOne: async (req, res, next) => {
     try {
       const query = req.user.role === 'admin' ? { _id: req.params.id } : { _id: req.params.id, department: req.user.department };
-      const item = await Model.findOne(query)
+      const queryExec = Model.findOne(query)
         .populate('createdBy', 'username fullName');
+      
+      if (resourceName === 'Requirement') {
+        queryExec.populate('clientId', 'companyName legalName spocName');
+      }
+
+      const item = await queryExec;
       if (!item) return res.status(404).json({ success: false, message: `${resourceName} not found` });
       res.json({ success: true, data: item });
     } catch (error) { next(error); }

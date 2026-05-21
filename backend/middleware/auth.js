@@ -83,4 +83,14 @@ const checkPermission = (permission) => {
   };
 };
 
-module.exports = { protect, allowDepartments, checkPermission };
+const adminOnly = (req, res, next) => {
+  if (req.user.role !== 'admin' && req.user.username !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Administrator privileges required.'
+    });
+  }
+  next();
+};
+
+module.exports = { protect, allowDepartments, checkPermission, adminOnly };

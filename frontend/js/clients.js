@@ -17,9 +17,14 @@ async function renderClients(container) {
         <div class="section-sub">Manage client accounts and points of contact</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search clients..." data-module="Clients" oninput="SearchManager.search('Clients', this.value, loadClients)" style="width:240px" />
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
           <span>Filters</span>
+        </button>
+        <button class="btn btn-ghost" onclick="exportToCSV('Clients', clientsData)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Export</span>
         </button>
         <button class="btn btn-secondary" onclick="openImportModal('Clients')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -41,13 +46,14 @@ async function renderClients(container) {
               <th><div class="th-content"><span>Email</span><button class="filter-trigger" onclick="openClientColumnFilter(this, 'email')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th><div class="th-content"><span>Contact</span><button class="filter-trigger" onclick="openClientColumnFilter(this, 'contactNumber')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th><div class="th-content"><span>Account ID</span><button class="filter-trigger" onclick="openClientColumnFilter(this, 'accountId')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
+              <th><div class="th-content"><span>Legal Name</span><button class="filter-trigger" onclick="openClientColumnFilter(this, 'legalName')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th>Added</th>
               <th>Actions</th>
             </tr>
           </thead>
 
 
-          <tbody id="clients-tbody"><tr><td colspan="7"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
+          <tbody id="clients-list"><tr><td colspan="7"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
         </table>
       </div>
     </div>`;
@@ -55,27 +61,38 @@ async function renderClients(container) {
   await loadClients();
 }
 
-async function loadClients(params = {}) {
-  const res = await api.clients.list(params);
+async function loadClients(options = {}) {
+  const res = await api.clients.list(options);
+  const tbody = document.getElementById('clients-list');
+  if (!tbody) return;
+
   if (res.ok) {
     clientsData = res.data.data;
-    renderClientsTable(clientsData);
+    if (clientsData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Clients', 'clients-list');
+    } else {
+      renderClientsTable(clientsData);
+    }
   } else {
-    toast('Failed to load clients', 'error');
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="7" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
 }
 
 function renderClientsTable(clients) {
-  const tbody = document.getElementById('clients-tbody');
+  const tbody = document.getElementById('clients-list');
   if (!tbody) return;
   if (!clients.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-table">${iconUsers()}<p>No clients found.</p></div></td></tr>`;
+    SearchManager.renderEmptyState('Clients', 'clients-list');
     return;
   }
   tbody.innerHTML = clients.map(c => `
     <tr>
       <td style="font-weight:600;color:var(--text-primary)">${c.spocName}</td>
-      <td>${c.companyName||'—'}</td>
+      <td>
+        <div style="font-weight:600">${c.companyName||'—'}</div>
+        <div style="font-size:0.75rem;color:var(--text-muted)">${c.legalName||'—'}</div>
+      </td>
       <td><a href="mailto:${c.email}" style="color:var(--accent)">${c.email}</a></td>
       <td><a href="tel:${c.contactNumber}" style="color:var(--text-secondary)">${c.contactNumber}</a></td>
       <td class="td-mono">${c.accountId||'—'}</td>
@@ -87,7 +104,8 @@ function renderClientsTable(clients) {
           <button class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="deleteClientConfirm('${c._id}','${c.spocName.replace(/'/g,"\\'")}')"> ${iconTrash()}</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>
+`).join('');
 }
 
 async function viewClient(id) {
@@ -154,7 +172,7 @@ async function viewClient(id) {
   openModal('Client Profile', html);
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let clientFilters = {};
 
 function openClientColumnFilter(btn, column) {
@@ -194,7 +212,11 @@ function openClientForm(client = null) {
         </div>
         <div class="field">
           <label>Company Name</label>
-          <input type="text" name="companyName" placeholder="Company Pvt. Ltd." value="${isEdit ? (client.companyName||'') : ''}" />
+          <input type="text" name="companyName" placeholder="e.g. ORAI Robotics" value="${isEdit ? (client.companyName||'') : ''}" />
+        </div>
+        <div class="field">
+          <label>Legal Name</label>
+          <input type="text" name="legalName" placeholder="e.g. ORAI Robotics Pvt Ltd" value="${isEdit ? (client.legalName||'') : ''}" />
         </div>
         <div class="field">
           <label>Email *</label>
@@ -245,3 +267,8 @@ function deleteClientConfirm(id, name) {
     else toast(res.data.message || 'Delete failed', 'error');
   });
 }
+function searchClients(q) {
+  SearchManager.search('Clients', q, loadClients);
+}
+
+console.log('[CLIENT MODULE STANDARDIZED]');

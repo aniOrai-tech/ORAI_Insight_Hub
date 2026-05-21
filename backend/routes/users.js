@@ -14,7 +14,11 @@ const requireAdmin = (req, res, next) => {
 // GET /api/users - Get all users
 router.get('/', protect, requireAdmin, async (req, res, next) => {
   try {
-    const users = await User.find().sort('-createdAt');
+    const { search } = req.query;
+    const { buildSearchFilter } = require('../utils/queryHelper');
+    const filter = buildSearchFilter('Member', search);
+
+    const users = await User.find(filter).sort('-createdAt');
     const safeUsers = users.map(u => u.toSafeObject());
     res.json({ success: true, data: safeUsers });
   } catch (err) {

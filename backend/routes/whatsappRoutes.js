@@ -10,7 +10,11 @@ router.use(checkPermission('whatsapp'));
 // GET /api/whatsapp - List all details
 router.get('/', async (req, res, next) => {
   try {
-    const details = await WhatsAppDetails.find()
+    const { search } = req.query;
+    const { buildSearchFilter } = require('../utils/queryHelper');
+    const filter = buildSearchFilter('WhatsApp', search);
+
+    const details = await WhatsAppDetails.find(filter)
       .populate('createdBy', 'username fullName')
       .sort({ createdAt: -1 });
     res.json({ success: true, data: details });

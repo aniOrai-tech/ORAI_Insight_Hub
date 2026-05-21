@@ -9,9 +9,14 @@ router.use(checkPermission('healthChecks'));
 // GET /api/healthchecks?monthYear=April 2026
 router.get('/', async (req, res, next) => {
   try {
-    const { monthYear } = req.query;
-    const filter = {};
+    const { monthYear, search } = req.query;
+    const { buildSearchFilter } = require('../utils/queryHelper');
+    
+    let filter = {};
     if (monthYear) filter.monthYear = monthYear;
+    if (search) {
+      filter = { ...filter, ...buildSearchFilter('HealthCheck', search) };
+    }
 
     const sheets = await HealthCheck.find(filter)
       .populate('createdBy', 'username fullName')

@@ -6,15 +6,15 @@
 const API_BASE = '/api';
 
 const api = {
-  // ─── Core fetch wrapper ────────────────────────────────────────
-  async request(method, endpoint, data = null, isFormData = false) {
+  // â”€â”€â”€ Core fetch wrapper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  async request(method, endpoint, data = null, isFormData = false, signal = null) {
     const token = localStorage.getItem('orai_token');
     const headers = {};
 
     if (token) headers['Authorization'] = `Bearer ${token}`;
     if (!isFormData) headers['Content-Type'] = 'application/json';
 
-    const config = { method, headers };
+    const config = { method, headers, signal };
     if (data) {
       config.body = isFormData ? data : JSON.stringify(data);
     }
@@ -33,14 +33,18 @@ const api = {
 
       return { ok: res.ok, status: res.status, data: json };
     } catch (err) {
+      if (err.name === 'AbortError') {
+        return { ok: false, data: { message: 'Request aborted' } };
+      }
       console.error('API Error:', err);
       return { ok: false, data: { message: 'Network error. Please check your connection.' } };
     }
   },
 
-  get:    (url, params) => {
-    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-    return api.request('GET', url + qs);
+  get: (url, params = {}) => {
+    const { signal, ...rest } = params;
+    const qs = Object.keys(rest).length ? '?' + new URLSearchParams(rest).toString() : '';
+    return api.request('GET', url + qs, null, false, signal);
   },
   post:   (url, data)        => api.request('POST', url, data),
   put:    (url, data)        => api.request('PUT', url, data),
@@ -49,7 +53,7 @@ const api = {
   upload: (url, formData)    => api.request('POST', url, formData, true),
   uploadPut: (url, formData) => api.request('PUT', url, formData, true),
 
-  // ─── Auth ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   auth: {
     login: (creds) => api.post('/auth/login', creds),
     verifyOTP: (data) => api.post('/auth/verify-otp', data),
@@ -60,16 +64,16 @@ const api = {
     updateProfile: (data) => api.put('/auth/update-profile', data),
   },
 
-  // ─── Users (Admin) ────────────────────────────────────────────
+  // â”€â”€â”€ Users (Admin) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   users: {
-    list: () => api.get('/users'),
+    list: (params) => api.get('/users', params),
     create: (data) => api.post('/users', data),
     update: (id, data) => api.put(`/users/${id}`, data),
     delete: (id) => api.delete(`/users/${id}`),
     toggleStatus: (id) => api.put(`/users/${id}/status`)
   },
 
-  // ─── Meetings ─────────────────────────────────────────────────
+  // â”€â”€â”€ Meetings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   meetings: {
     list:   (params) => api.get('/meetings', params),
     get:    (id)     => api.get(`/meetings/${id}`),
@@ -81,7 +85,7 @@ const api = {
     enrichManual: () => api.post('/meetings/enrich-manual')
   },
 
-  // ─── Bots ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Bots â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   bots: {
     list:   (params) => api.get('/bots', params),
     get:    (id)     => api.get(`/bots/${id}`),
@@ -90,7 +94,7 @@ const api = {
     delete: (id)     => api.delete(`/bots/${id}`)
   },
 
-  // ─── Clients ──────────────────────────────────────────────────
+  // â”€â”€â”€ Clients â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   clients: {
     list:   (params) => api.get('/clients', params),
     get:    (id)     => api.get(`/clients/${id}`),
@@ -99,7 +103,7 @@ const api = {
     delete: (id)     => api.delete(`/clients/${id}`)
   },
 
-  // ─── Upsell ───────────────────────────────────────────────────
+  // â”€â”€â”€ Upsell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   upsell: {
     list:   (params) => api.get('/upsell', params),
     get:    (id)     => api.get(`/upsell/${id}`),
@@ -108,7 +112,7 @@ const api = {
     delete: (id)     => api.delete(`/upsell/${id}`)
   },
 
-  // ─── Requirements ─────────────────────────────────────────────
+  // â”€â”€â”€ Requirements â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   requirements: {
     list:   (params) => api.get('/requirements', params),
     get:    (id)     => api.get(`/requirements/${id}`),
@@ -117,20 +121,20 @@ const api = {
     delete: (id)     => api.delete(`/requirements/${id}`)
   },
 
-  // ─── Analytics ────────────────────────────────────────────────
+  // â”€â”€â”€ Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   analytics: {
     get: () => api.get('/analytics')
   },
 
-  // ─── WhatsApp Logins ──────────────────────────────────────────
+  // â”€â”€â”€ WhatsApp Logins â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   whatsapp: {
-    list:   () => api.get('/whatsapp'),
+    list:   (params) => api.get('/whatsapp', params),
     create: (data) => api.post('/whatsapp', data),
     update: (id, data) => api.put(`/whatsapp/${id}`, data),
     delete: (id) => api.delete(`/whatsapp/${id}`)
   },
 
-  // ─── Health Checks ────────────────────────────────────────────
+  // â”€â”€â”€ Health Checks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   healthchecks: {
     list:   (params) => api.get('/healthchecks', params),
     create: (data) => api.post('/healthchecks', data),
@@ -139,10 +143,10 @@ const api = {
     generate: (data) => api.post('/healthchecks/generate', data)
   },
 
-  // ─── Bulk Import ──────────────────────────────────────────────
+  // â”€â”€â”€ Bulk Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   import: (module, formData) => api.upload(`/import/${module}`, formData),
 
-  // ─── Tickets ──────────────────────────────────────────────────
+  // â”€â”€â”€ Tickets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   tickets: {
     list:      (params) => api.get('/tickets', params),
     get:       (id)     => api.get(`/tickets/${id}`),
@@ -154,7 +158,7 @@ const api = {
     analytics: ()       => api.get('/tickets/analytics')
   },
 
-  // ─── Invoices ─────────────────────────────────────────────────
+  // â”€â”€â”€ Invoices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   invoices: {
     list:   (params) => api.get('/invoices', params),
     get:    (id)     => api.get(`/invoices/${id}`),
@@ -163,14 +167,14 @@ const api = {
     delete: (id)     => api.delete(`/invoices/${id}`)
   },
 
-  // ─── Payments ─────────────────────────────────────────────────
+  // â”€â”€â”€ Payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   payments: {
     list:   (params) => api.get('/payments', params),
     create: (data)   => api.post('/payments', data),
     delete: (id)     => api.delete(`/payments/${id}`)
   },
 
-  // ─── Expenses ─────────────────────────────────────────────────
+  // â”€â”€â”€ Expenses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   expenses: {
     list:      (params) => api.get('/expenses', params),
     create:    (data)   => api.post('/expenses', data),
@@ -179,7 +183,24 @@ const api = {
     analytics: ()       => api.get('/expenses/analytics/finance')
   },
 
-  // ─── Proposals ────────────────────────────────────────────────
+  // â”€â”€â”€ Daily Tasks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  dailyTasks: {
+    list:       (params) => api.get('/tasks', params),
+    create:     (data)   => api.post('/tasks', data),
+    update:     (id, d)  => api.put(`/tasks/${id}`, d),
+    delete:     (id)     => api.delete(`/tasks/${id}`),
+    getSummary: (params) => api.get('/tasks/summary', params)
+  },
+
+  // â”€â”€â”€ Members â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  members: {
+    list:   (params) => api.get('/members', params),
+    create: (data)   => api.post('/members', data),
+    update: (id, d)  => api.put(`/members/${id}`, d),
+    delete: (id)     => api.delete(`/members/${id}`)
+  },
+
+  // â”€â”€â”€ Proposals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   proposals: {
     list:        (params) => api.get('/proposals', params),
     getVersions: (id)     => api.get(`/proposals/${id}/versions`),

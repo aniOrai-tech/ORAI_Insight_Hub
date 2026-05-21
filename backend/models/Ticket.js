@@ -89,6 +89,7 @@ const ticketSchema = new mongoose.Schema({
   firstResponseAt: { type: Date },
   resolvedAt: { type: Date },
   closedAt: { type: Date },
+  resolutionTime: { type: Number }, // custom resolution time in hours
 
   // Conversation / Notes timeline
   notes: [noteSchema],
@@ -133,11 +134,16 @@ ticketSchema.pre('validate', async function(next) {
   next();
 });
 
-// Auto-calculate SLA deadline based on priority
+// Auto-calculate SLA deadline based on priority or custom resolutionTime
 ticketSchema.pre('save', function(next) {
-  if (this.isNew || this.isModified('priority')) {
-    const slaHours = { critical: 4, high: 8, medium: 24, low: 48 };
-    const hours = slaHours[this.priority] || 24;
+  if (this.isNew || this.isModified('priority') || this.isModified('resolutionTime')) {
+    let hours;
+    if (this.resolutionTime && this.resolutionTime > 0) {
+      hours = this.resolutionTime;
+    } else {
+      const slaHours = { critical: 4, high: 8, medium: 24, low: 48 };
+      hours = slaHours[this.priority] || 24;
+    }
     this.slaDeadline = new Date(Date.now() + hours * 60 * 60 * 1000);
   }
 

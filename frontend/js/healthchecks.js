@@ -13,9 +13,14 @@ async function renderHealthChecks(container) {
         <div class="section-sub">Monitor engagement, calls, and email activity</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search customers..." data-module="HealthChecks" oninput="SearchManager.search('HealthChecks', this.value, loadHealthChecks)" style="width:240px" />
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
           <span>Filters</span>
+        </button>
+        <button class="btn btn-ghost" onclick="exportToCSV('HealthChecks', healthChecksData)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Export</span>
         </button>
         <button class="btn btn-secondary" onclick="openImportModal('HealthChecks')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -40,7 +45,8 @@ async function renderHealthChecks(container) {
               <th><div class="th-content"><span>Call 1</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'call1')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th><div class="th-content"><span>Call 2</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'call2')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th><div class="th-content"><span>Call 3</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'call3')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
-              <th><div class="th-content"><span>Email</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'emailSent')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
+              <th><div class="th-content"><span>Payment Status</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'paymentStatus')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
+              <th><div class="th-content"><span>Pending Amount</span><button class="filter-trigger" onclick="openHealthCheckColumnFilter(this, 'pendingAmount')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -56,15 +62,29 @@ async function renderHealthChecks(container) {
   loadHealthChecks();
 }
 
+let healthDebounce = null;
+function searchHealthChecks(q) {
+  SearchManager.search('HealthChecks', q, loadHealthChecks);
+}
+
 let healthChecksData = [];
 
-async function loadHealthChecks() {
-  const res = await api.healthchecks.list({ monthYear: selectedMonth });
+async function loadHealthChecks(options = {}) {
+  const query = { monthYear: selectedMonth, ...options };
+  const res = await api.healthchecks.list(query);
+  const tbody = document.getElementById('healthcheck-list');
+  if (!tbody) return;
+
   if (res.ok) {
     healthChecksData = res.data.data;
-    renderHealthChecksTable(healthChecksData);
+    if (healthChecksData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('HealthChecks', 'healthcheck-list');
+    } else {
+      renderHealthChecksTable(healthChecksData);
+    }
   } else {
-    document.getElementById('healthcheck-list').innerHTML = `<tr><td colspan="10" class="error-state">Error: ${res.data.message}</td></tr>`;
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="10" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
 }
 
@@ -73,7 +93,7 @@ function renderHealthChecksTable(entries) {
   if (!tbody) return;
 
   if (entries.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No entries found.</td></tr>`;
+    SearchManager.renderEmptyState('HealthChecks', 'healthcheck-list');
     return;
   }
 
@@ -85,30 +105,16 @@ function renderHealthChecksTable(entries) {
       <td>${statusBadge(e.status || 'active')}</td>
       <td><div class="channels-list">${e.channelsLiveOn || '—'}</div></td>
       <td>
-        <div class="call-info">
-          <span class="call-date">${formatDate(e.dateOfCall1)}</span>
-          <span class="call-remark">${truncate(e.platformUsageRemark, 20)}</span>
-        </div>
-      </td>
-      <td>
-        <div class="call-info">
-          <span class="call-date">${formatDate(e.dateOfCall2)}</span>
-          <span class="call-remark">${truncate(e.remark2, 20)}</span>
-        </div>
-      </td>
-      <td>
-        <div class="call-info">
-          <span class="call-date">${formatDate(e.dateOfCall3)}</span>
-          <span class="call-remark">${truncate(e.remark3, 20)}</span>
-        </div>
-      </td>
-      <td>
-        <span class="email-status ${e.emailSent ? 'sent' : 'pending'}">
-          ${e.emailSent ? '✅ Sent' : '⏳ Pending'}
+        <span class="badge ${e.paymentStatus === 'cleared' ? 'badge-green' : (e.paymentStatus === 'overdue' ? 'badge-red' : 'badge-yellow')}">
+          ${(e.paymentStatus || 'pending').toUpperCase()}
         </span>
+      </td>
+      <td class="td-mono" style="font-weight:700; color:${e.pendingAmount > 0 ? 'var(--red)' : 'var(--green)'}">
+        ${formatCurrency(e.pendingAmount || 0)}
       </td>
       <td class="actions-cell">
         <div class="action-btns">
+          <button class="btn-icon" title="View Details" onclick="viewHealthCheck('${e._id}')">${iconEye()}</button>
           <button class="btn-icon" title="Edit" onclick="openEditHealthCheckModal('${e._id}')">${iconEdit()}</button>
           <button class="btn-icon btn-icon-danger" title="Delete" onclick="deleteHealthCheck('${e._id}', '${e.customerName}')">${iconTrash()}</button>
         </div>
@@ -190,6 +196,20 @@ function openAddHealthCheckModal() {
             <option value="true">Yes</option>
           </select>
         </div>
+        <hr class="full-width">
+        <div class="form-group">
+          <label>Payment Pending Status</label>
+          <select name="paymentStatus">
+            <option value="pending">Pending</option>
+            <option value="partial">Partial</option>
+            <option value="cleared">Cleared</option>
+            <option value="overdue">Overdue</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pending Amount</label>
+          <input type="number" name="pendingAmount" placeholder="0.00" step="0.01">
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -268,6 +288,20 @@ async function openEditHealthCheckModal(id) {
             <option value="true" ${e.emailSent ? 'selected' : ''}>Yes</option>
           </select>
         </div>
+        <hr class="full-width">
+        <div class="form-group">
+          <label>Payment Pending Status</label>
+          <select name="paymentStatus">
+            <option value="pending" ${e.paymentStatus === 'pending' ? 'selected' : ''}>Pending</option>
+            <option value="partial" ${e.paymentStatus === 'partial' ? 'selected' : ''}>Partial</option>
+            <option value="cleared" ${e.paymentStatus === 'cleared' ? 'selected' : ''}>Cleared</option>
+            <option value="overdue" ${e.paymentStatus === 'overdue' ? 'selected' : ''}>Overdue</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Pending Amount</label>
+          <input type="number" name="pendingAmount" value="${e.pendingAmount || 0}" step="0.01">
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -342,7 +376,7 @@ async function confirmGenerateMonth(fromMonth) {
   }
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let currentFilters = {};
 
 function openHealthCheckColumnFilter(btn, column) {

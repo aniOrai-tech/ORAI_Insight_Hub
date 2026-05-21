@@ -193,7 +193,7 @@ function renderCharts(d) {
   const red = '#f87171';
   const purple = '#a78bfa';
 
-  // ─ Meetings over time (Bar) ─
+  // â”€ Meetings over time (Bar) â”€
   const mpm = d.charts?.meetingsPerMonth || [];
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   destroyChart('chart-meetings');
@@ -219,7 +219,7 @@ function renderCharts(d) {
     });
   }
 
-  // ─ Bot integrations (Doughnut) ─
+  // â”€ Bot integrations (Doughnut) â”€
   const integrations = d.bots?.integrations || [];
   destroyChart('chart-bots');
   const bCtx = document.getElementById('chart-bots');
@@ -241,7 +241,7 @@ function renderCharts(d) {
     });
   }
 
-  // ─ Upsell pipeline (Horizontal bar) ─
+  // â”€ Upsell pipeline (Horizontal bar) â”€
   if ((currentUser.permissions || {}).upsell) {
     const upsellStatus = d.upsell?.byStatus || [];
     destroyChart('chart-upsell');
@@ -266,7 +266,7 @@ function renderCharts(d) {
     }
   }
 
-  // ─ Requirements by priority (Pie) ─
+  // â”€ Requirements by priority (Pie) â”€
   if ((currentUser.permissions || {}).requirements) {
     const reqPriority = d.requirements?.byPriority || [];
     destroyChart('chart-reqs');
@@ -316,7 +316,7 @@ function renderExpiryAlert(meetingStats) {
 }
 
 
-// ─── Dashboard Filtering ───────────────────────────────────────────────────────
+// â”€â”€â”€ Dashboard Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openGoLiveFilter(btn) {
   // Generate filter items (Last 12 months)
   const items = [];

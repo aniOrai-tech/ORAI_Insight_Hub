@@ -173,7 +173,7 @@ const login = async (req, res, next) => {
     // Send OTP email
     try {
       await sendOTPEmail(userEmail, otp, user.fullName || user.username);
-      console.log(`🔐 OTP sent to ${userEmail} for user ${username}`);
+      console.log(`🔐 OTP sent to ${userEmail} for user ${username}. OTP CODE: ${otp}`);
     } catch (emailError) {
       console.error(`❌ Failed to send OTP email:`, emailError.message);
       // If email fails, login directly as fallback

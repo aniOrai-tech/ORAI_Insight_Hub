@@ -6,6 +6,7 @@ const Invoice = require('../models/Invoice');
 const Payment = require('../models/Payment');
 const Expense = require('../models/Expense');
 const { sanitizePayload } = require('../services/mappers/accountMapper');
+const { buildSearchFilter } = require('../utils/queryHelper');
 
 // ═══════════════════════════════════════════════════════════════ INVOICES
 
@@ -14,16 +15,15 @@ exports.getInvoices = async (req, res, next) => {
     const { search, status, page = 1, limit = 20 } = req.query;
     const filter = { department: req.user.department, isDeleted: false };
     if (status) filter.status = status;
+    
     if (search) {
-      filter.$or = [
-        { invoiceNumber: { $regex: search, $options: 'i' } },
-        { clientName: { $regex: search, $options: 'i' } }
-      ];
+      Object.assign(filter, buildSearchFilter('Invoice', search));
     }
 
     const total = await Invoice.countDocuments(filter);
     const invoices = await Invoice.find(filter)
       .populate('createdBy', 'username fullName')
+      .populate('clientId', 'companyName legalName spocName')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -43,7 +43,8 @@ exports.getInvoices = async (req, res, next) => {
 exports.getInvoice = async (req, res, next) => {
   try {
     const invoice = await Invoice.findOne({ _id: req.params.id, department: req.user.department, isDeleted: false })
-      .populate('createdBy', 'username fullName');
+      .populate('createdBy', 'username fullName')
+      .populate('clientId', 'companyName legalName spocName address gstin');
     if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
 
     // Get payments linked to this invoice
@@ -141,6 +142,9 @@ exports.getPayments = async (req, res, next) => {
     const { invoiceId, page = 1, limit = 20 } = req.query;
     const filter = { department: req.user.department, isDeleted: false };
     if (invoiceId) filter.invoiceId = invoiceId;
+    if (search) {
+      Object.assign(filter, buildSearchFilter('Payment', search));
+    }
 
     const total = await Payment.countDocuments(filter);
     const payments = await Payment.find(filter)
@@ -207,11 +211,7 @@ exports.getExpenses = async (req, res, next) => {
     const filter = { department: req.user.department, isDeleted: false };
     if (category) filter.category = category;
     if (search) {
-      filter.$or = [
-        { description: { $regex: search, $options: 'i' } },
-        { vendor: { $regex: search, $options: 'i' } },
-        { expenseId: { $regex: search, $options: 'i' } }
-      ];
+      Object.assign(filter, buildSearchFilter('Expense', search));
     }
 
     const total = await Expense.countDocuments(filter);

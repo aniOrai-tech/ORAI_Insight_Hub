@@ -85,7 +85,7 @@ async function renderProfile(container) {
     </div>
   `;
 
-  // ── Events ──
+  // â”€â”€ Events â”€â”€
   document.getElementById('profile-info-form').addEventListener('submit', handleUpdateProfile);
   document.getElementById('change-password-form').addEventListener('submit', handleChangePassword);
 }

@@ -16,6 +16,17 @@ const healthCheckSchema = new mongoose.Schema({
   remark3: { type: String, trim: true },
   emailSent: { type: String, trim: true },
   
+  // Financial context
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'cleared', 'overdue'],
+    default: 'pending'
+  },
+  pendingAmount: {
+    type: Number,
+    default: 0
+  },
+  
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, {
   timestamps: true

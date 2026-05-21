@@ -341,11 +341,19 @@ img { max-width: 100%; }
   transition: width var(--transition-slow);
   position: relative; z-index: 100;
 }
-.sidebar.collapsed { width: var(--sidebar-collapsed); }
+.sidebar.collapsed {
+  width: 0 !important;
+  border-right: none !important;
+}
 .sidebar.collapsed .sidebar-brand-name,
 .sidebar.collapsed .user-info,
 .sidebar.collapsed .nav-label,
 .sidebar.collapsed .sidebar-footer span { display: none; }
+
+/* Show mobile menu button in topbar when sidebar is collapsed on desktop */
+.sidebar.collapsed ~ .main-content .mobile-menu-btn {
+  display: flex !important;
+}
 
 .sidebar-header {
   padding: 14px 18px;
@@ -371,6 +379,32 @@ img { max-width: 100%; }
   transition: var(--transition);
 }
 .sidebar-toggle:hover { color: var(--accent); background: var(--accent-dim); }
+
+.sidebar-user-toggle {
+  padding: 14px 16px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border);
+  transition: var(--transition);
+  user-select: none;
+}
+.sidebar-user-toggle:hover {
+  color: var(--accent);
+  background: var(--bg-card-hover);
+}
+.sidebar-user-toggle .profile-dots {
+  letter-spacing: 1px;
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+.sidebar-user-toggle:hover .profile-dots {
+  color: var(--accent);
+}
 
 .sidebar-user {
   padding: 14px 16px;
@@ -485,6 +519,7 @@ img { max-width: 100%; }
   display: none;
   color: var(--text-secondary); padding: 6px;
   border-radius: 8px; transition: var(--transition);
+  cursor: pointer;
 }
 .mobile-menu-btn:hover { color: var(--accent); background: var(--accent-dim); }
 .topbar-breadcrumb {
@@ -784,9 +819,10 @@ tbody tr:last-child td { border-bottom: none; }
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(6px);
   z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 32px 20px 20px;
   animation: fadeIn 0.15s ease;
+  overflow-y: auto;
 }
 .modal-overlay.hidden { display: none; }
 .modal {
@@ -794,7 +830,7 @@ tbody tr:last-child td { border-bottom: none; }
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-xl);
   width: 100%; max-width: 680px;
-  max-height: 90vh;
+  max-height: 92vh;
   display: flex; flex-direction: column;
   box-shadow: var(--shadow-lg);
   animation: modalSlide 0.25s ease;
@@ -1348,4 +1384,728 @@ th .btn-icon:hover svg {
 
 .send-btn:hover {
   color: var(--accent-dark);
+}
+
+/* Spreadsheet Sheet Tabs Bar styling */
+.sheet-tabs-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-top: 16px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  user-select: none;
+  font-family: inherit;
+  font-size: 0.85rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.sheet-tabs-scroll-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+
+.sheet-tab-scroll-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--text-secondary);
+  z-index: 2;
+  transition: all 0.2s ease;
+}
+
+.sheet-tab-scroll-btn:hover {
+  background: var(--bg-body);
+  color: var(--text-primary);
+}
+
+.sheet-tabs-scroll-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  height: 100%;
+  width: 100%;
+  margin: 0 8px;
+  padding-top: 6px;
+}
+
+.sheet-tabs-scroll-area::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for clean look */
+}
+
+.sheet-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 32px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  position: relative;
+  box-shadow: inset 0 -2px 5px rgba(0,0,0,0.02);
+}
+
+.sheet-tab:hover {
+  background: var(--bg-body);
+  color: var(--text-primary);
+}
+
+.sheet-tab.active {
+  background: var(--bg-base);
+  color: #107c41; /* Microsoft Excel Green color for premium look */
+  font-weight: 600;
+  border-top: 3px solid #107c41; /* Top indicator line */
+  border-bottom: 1px solid var(--bg-base);
+  margin-bottom: -1px; /* Overlap border */
+  z-index: 1;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sheet-tab-icon {
+  margin-right: 6px;
+  font-size: 0.95rem;
+}
+
+.sheet-tab-hours {
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-size: 0.75rem;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.sheet-tab.active .sheet-tab-hours {
+  color: #107c41;
+}
+
+/* Light / White Theme Overrides */
+body.theme-light .sheet-tab.active,
+body.theme-white .sheet-tab.active {
+  background: #ffffff;
+  border-bottom-color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAILY TASK SEARCH BAR — Premium Glassmorphism Selectors
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-search-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0;
+}
+
+.dt-selectors-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.dt-selector-divider {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(180deg, transparent, var(--border-strong), transparent);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* ── Selector Group ── */
+.dt-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.dt-selector-group::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.dt-selector-group:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.08), 0 0 0 1px rgba(168, 85, 247, 0.05);
+  transform: translateY(-1px);
+}
+
+.dt-selector-group:hover::before {
+  opacity: 1;
+}
+
+.dt-selector-group:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim), 0 4px 20px rgba(168, 85, 247, 0.12);
+}
+
+/* ── Selector Label ── */
+.dt-selector-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, var(--accent-dim), rgba(168, 85, 247, 0.06));
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.dt-selector-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(126, 34, 206, 0.3);
+}
+
+.dt-selector-icon.resource-icon {
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+.dt-selector-text {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Select Wrapper ── */
+.dt-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.dt-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 10px 36px 10px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  min-width: 180px;
+  font-family: var(--font-main);
+  transition: color 0.2s ease;
+}
+
+.dt-select-wide {
+  min-width: 240px;
+}
+
+.dt-select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  padding: 10px;
+  font-weight: 500;
+}
+
+.dt-select:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ── Custom Arrow ── */
+.dt-select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.dt-selector-group:hover .dt-select-arrow {
+  background: var(--accent);
+  color: white;
+  box-shadow: 0 2px 6px rgba(168, 85, 247, 0.3);
+}
+
+/* ── Lock Icon for Non-Admin ── */
+.dt-select-lock {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.dt-locked {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.dt-locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ── Date Chips ── */
+.dt-date-chips {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.dt-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dt-chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.15);
+}
+
+.dt-chip.active {
+  background: linear-gradient(135deg, var(--accent-dark), var(--accent));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 2px 12px rgba(126, 34, 206, 0.35);
+  font-weight: 700;
+}
+
+.dt-chip.active:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(126, 34, 206, 0.45);
+}
+
+/* ── Export Button ── */
+.dt-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dt-export-btn:hover {
+  color: var(--green);
+  border-color: var(--green);
+  background: var(--green-bg);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
+}
+
+.dt-export-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.dt-export-btn:hover svg {
+  transform: translateY(1px);
+}
+
+.dt-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .dt-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dt-selectors-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .dt-selector-group {
+    width: 100%;
+  }
+  .dt-select {
+    width: 100%;
+    min-width: 0;
+  }
+  .dt-select-wide {
+    min-width: 0;
+  }
+  .dt-selector-divider {
+    display: none;
+  }
+  .dt-date-chips {
+    width: 100%;
+    justify-content: center;
+  }
+  .dt-actions-row {
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 600px) {
+  .dt-selector-label {
+    padding: 6px 10px;
+  }
+  .dt-selector-text {
+    font-size: 0.65rem;
+  }
+  .dt-select {
+    font-size: 0.82rem;
+    padding: 8px 32px 8px 10px;
+  }
+  .hide-mobile {
+    display: none;
+  }
+}
+
+/* ── Light/White theme overrides ── */
+body.theme-light .dt-selector-group,
+body.theme-white .dt-selector-group {
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+body.theme-light .dt-selector-group:hover,
+body.theme-white .dt-selector-group:hover {
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.08), 0 1px 3px rgba(0,0,0,0.04);
+}
+
+body.theme-light .dt-chip,
+body.theme-white .dt-chip {
+  background: #ffffff;
+}
+
+body.theme-light .dt-export-btn,
+body.theme-white .dt-export-btn {
+  background: #ffffff;
+}
+
+/* Daily Task Module UI Polish */
+.table-container {
+  overflow-x: auto;
+  padding-bottom: 8px; /* Give room for horizontal scrollbars so they don't overlay row text */
+}
+
+.data-table th {
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.data-table td {
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  height: 44px;
+  box-sizing: border-box;
+  vertical-align: middle;
+}
+
+.td-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+/* Compact Stats Cards for Daily Tasks Dashboard */
+.stats-grid.compact {
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stats-grid.compact .stat-card {
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+
+.stats-grid.compact .stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.stats-grid.compact .stat-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stats-grid.compact .stat-value {
+  font-size: 1.3rem !important;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.stats-grid.compact .stat-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.stats-grid.compact .stat-sub {
+  font-size: 0.68rem;
+  margin-top: 2px;
+  color: var(--text-muted);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DAILY TASK — Time Spent Widget (Premium)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dt-time-widget {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: visible;
+  transition: all 0.25s ease;
+  position: relative;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.dt-time-widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-dark), var(--accent), var(--purple));
+  border-radius: 12px 12px 0 0;
+}
+
+.dt-time-widget:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.1);
+  transform: translateY(-1px);
+}
+
+/* ── Header ── */
+.dt-time-widget-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+
+.dt-time-widget-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── Large Display ── */
+.dt-time-widget-display {
+  padding: 4px 14px 8px;
+}
+
+.dt-time-widget-display .manual-hours-display {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* ── Selects Row ── */
+.dt-time-widget-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+
+.dt-time-select-group {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.dt-time-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 36px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-body);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.dt-time-select:hover {
+  border-color: var(--accent);
+  background: var(--bg-input);
+}
+
+.dt-time-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.dt-time-select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  padding: 6px;
+}
+
+/* ── Custom Arrow ── */
+.dt-time-select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.dt-time-select-group:hover .dt-time-select-arrow {
+  background: var(--accent);
+  color: white;
+}
+
+/* ── Colon Separator ── */
+.dt-time-colon {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin: 0 -2px;
+  user-select: none;
+}
+
+/* ── Force dropdowns to open DOWNWARD ── */
+.modal-body {
+  overflow-y: auto;
+  overflow-x: visible;
+}
+
+.task-entry-item {
+  overflow: visible !important;
+}
+
+.dt-time-widget,
+.dt-time-widget-selects,
+.dt-time-select-group {
+  overflow: visible;
+}
+
+/* ── Theme Overrides ── */
+body.theme-light .dt-time-widget,
+body.theme-white .dt-time-widget {
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+body.theme-light .dt-time-select,
+body.theme-white .dt-time-select {
+  background: #f8fafc;
+}
+
+body.theme-light .dt-time-select:hover,
+body.theme-white .dt-time-select:hover {
+  background: #f1f5f9;
 }

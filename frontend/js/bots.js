@@ -12,6 +12,7 @@ async function renderBots(container) {
         <div class="section-sub">Manage WhatsApp Business Account (WABA) configurations</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search bots..." data-module="Bots" oninput="SearchManager.search('Bots', this.value, loadBots)" style="width:240px" />
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
           <span>Filters</span>
@@ -21,7 +22,7 @@ async function renderBots(container) {
           <span>Import Excel</span>
         </button>
         <button class="btn btn-primary" onclick="openBotForm()">
-          ${iconPlus()} Add Bot Config
+          ${iconPlus()} Add Bot
         </button>
       </div>
     </div>
@@ -41,7 +42,7 @@ async function renderBots(container) {
             </tr>
           </thead>
 
-          <tbody id="bots-tbody"><tr><td colspan="9"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
+          <tbody id="bots-list"><tr><td colspan="9"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
         </table>
       </div>
     </div>`;
@@ -49,18 +50,29 @@ async function renderBots(container) {
   await loadBots();
 }
 
-async function loadBots(params = {}) {
-  const res = await api.bots.list(params);
-  if (!res.ok) { toast('Failed to load bots', 'error'); return; }
-  botsData = res.data.data;
-  renderBotsTable(botsData);
+async function loadBots(options = {}) {
+  const res = await api.bots.list(options);
+  const tbody = document.getElementById('bots-list');
+  if (!tbody) return;
+
+  if (res.ok) {
+    botsData = res.data.data;
+    if (botsData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Bots', 'bots-list');
+    } else {
+      renderBotsTable(botsData);
+    }
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="9" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 function renderBotsTable(bots) {
-  const tbody = document.getElementById('bots-tbody');
+  const tbody = document.getElementById('bots-list');
   if (!tbody) return;
   if (!bots.length) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-table">${iconBot()}<p>No bots found.</p></div></td></tr>`;
+    SearchManager.renderEmptyState('Bots', 'bots-list');
     return;
   }
 
@@ -85,8 +97,7 @@ function renderBotsTable(bots) {
 
 let botSearchTimeout;
 function searchBots(q) {
-  clearTimeout(botSearchTimeout);
-  botSearchTimeout = setTimeout(() => loadBots({ search: q }), 350);
+  SearchManager.search('Bots', q, loadBots);
 }
 
 function openBotForm(bot = null) {
@@ -207,7 +218,7 @@ function deleteBotConfirm(id, name) {
   });
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Filtering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let botFilters = {};
 
 function openBotColumnFilter(btn, column) {

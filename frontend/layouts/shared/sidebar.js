@@ -10,6 +10,10 @@ function renderEnterpriseSidebar(mode = 'hub') {
   const user = window.currentUser;
   const perms = user.permissions || {};
 
+  if (typeof window.showDeskExtras === 'undefined') {
+    window.showDeskExtras = false;
+  }
+
   const config = {
     hub: [
       { id: 'dashboard', label: 'Overview', icon: 'grid' },
@@ -22,15 +26,21 @@ function renderEnterpriseSidebar(mode = 'hub') {
       { id: 'requirements', label: 'Requirements', icon: 'clipboard', perm: 'requirements' },
       { id: 'whatsapp', label: 'WhatsApp', icon: 'bot', perm: 'whatsapp' },
       { id: 'healthchecks', label: 'Health Tracker', icon: 'trend', perm: 'healthChecks' },
+      { id: 'daily-tasks', label: 'Daily Task Update', icon: 'activity' },
       { id: 'admin', label: 'Admin Panel', icon: 'users', perm: 'admin' },
       { type: 'divider' },
       { id: 'profile', label: 'My Profile', icon: 'users' },
     ],
-    desk: [
+    desk: window.showDeskExtras ? [
       { id: 'desk-hq', label: 'Headquarters', icon: 'grid' },
       { id: 'desk-queue', label: 'My Queue', icon: 'ticket' },
       { id: 'desk-feeds', label: 'Team Feed', icon: 'activity' },
       { id: 'tickets', label: 'All Tickets', icon: 'clipboard' },
+      { id: 'desk-more', label: 'Less Options', icon: 'more' },
+      { id: 'dashboard', label: 'Exit Desk', icon: 'chevron-left' },
+    ] : [
+      { id: 'tickets', label: 'All Tickets', icon: 'clipboard' },
+      { id: 'desk-more', label: 'More Options', icon: 'more' },
       { id: 'dashboard', label: 'Exit Desk', icon: 'chevron-left' },
     ],
     books: [
@@ -60,6 +70,7 @@ function renderEnterpriseSidebar(mode = 'hub') {
       case 'ticket': return iconTicket();
       case 'chevron-left': return iconChevronLeft();
       case 'home': return iconHome();
+      case 'more': return typeof iconMore === 'function' ? iconMore() : '•••';
       default: return '';
     }
   };
@@ -80,6 +91,7 @@ function renderEnterpriseSidebar(mode = 'hub') {
     const el = document.createElement('div');
     el.className = `nav-item ${window.currentPage === item.id ? 'active' : ''}`;
     el.id = `nav-${item.id}`;
+    el.title = item.label;
     
     const badgeHtml = item.badge ? `<span class="nav-badge">${item.badge}</span>` : '';
     const iconHtml = getIcon(item.icon);
@@ -92,6 +104,11 @@ function renderEnterpriseSidebar(mode = 'hub') {
 
     el.onclick = () => {
       console.log(`[SIDEBAR] Clicked item: ${item.id}`);
+      if (item.id === 'desk-more') {
+        window.showDeskExtras = !window.showDeskExtras;
+        renderEnterpriseSidebar('desk');
+        return;
+      }
       if (item.id === 'dashboard' && mode !== 'hub') LayoutManager.setMode('hub');
       navigateTo(item.id);
     };
@@ -106,6 +123,7 @@ function renderEnterpriseSidebar(mode = 'hub') {
         const subEl = document.createElement('div');
         subEl.className = `nav-sub-item ${window.currentPage === sub.id ? 'active' : ''}`;
         subEl.textContent = sub.label;
+        subEl.title = sub.label;
         subEl.onclick = (e) => {
           e.stopPropagation();
           navigateTo(sub.id);

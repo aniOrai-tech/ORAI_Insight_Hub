@@ -60,6 +60,8 @@ app.use('/api/invoices',     require('./routes/invoiceRoutes'));
 app.use('/api/payments',     require('./routes/paymentRoutes'));
 app.use('/api/expenses',     require('./routes/expenseRoutes'));
 app.use('/api/agent',        require('./routes/agentRoutes'));
+app.use('/api/tasks', require('./modules/dailyTasks/routes'));
+app.use('/api/members',     require('./routes/memberRoutes'));
 app.use('/api/proposals',    require('./routes/proposalRoutes'));
 app.use('/api',              require('./routes/ai'));      // FIX: moved above app.listen()
 

@@ -10,10 +10,13 @@ async function renderAdmin(container) {
         <h2 class="section-title">Admin Panel</h2>
         <p class="section-sub">Manage team members and access</p>
       </div>
-      <button class="btn btn-primary" onclick="openAddUserModal()">
-        ${iconPlus()} Add Team Member
-      </button>
-    </div>
+        <div style="display:flex; gap:12px">
+          <input type="text" class="search-input" placeholder="Search team..." data-module="Users" oninput="SearchManager.search('Users', this.value, loadUsers)" style="width:240px" />
+          <button class="btn btn-primary" onclick="openAddUserModal()">
+            ${iconPlus()} Add Team Member
+          </button>
+        </div>
+      </div>
 
     <div class="table-card" style="animation: fadeUp 0.4s ease both;">
       <div class="table-header">
@@ -32,7 +35,7 @@ async function renderAdmin(container) {
             </tr>
           </thead>
           <tbody id="users-tbody">
-            <tr><td colspan="6" style="text-align:center"><div class="spinner" style="margin:20px auto"></div></td></tr>
+            <tr><td colspan="6"><div class="empty-table"><p>Loading team members...</p></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -42,13 +45,17 @@ async function renderAdmin(container) {
   loadUsers();
 }
 
-async function loadUsers() {
-  const res = await api.users.list();
+async function loadUsers(options = {}) {
+  const res = await api.users.list(options);
   const tbody = document.getElementById('users-tbody');
   if (!tbody) return;
 
   if (res.ok) {
     const users = res.data.data || res.data;
+    if ((!users || users.length === 0) && options.search) {
+      SearchManager.renderEmptyState('Users', 'users-tbody');
+      return;
+    }
     if (!users || users.length === 0) {
       tbody.innerHTML = `<tr><td colspan="6" class="empty-table"><p>No users found.</p></td></tr>`;
       return;
@@ -84,9 +91,13 @@ async function loadUsers() {
       </tr>
     `).join('');
   } else {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty-table"><p style="color:var(--red)">Failed to load users.</p></td></tr>`;
-    toast(res.data.message || 'Error loading users', 'error');
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="6" class="error-state">Error: ${res.data.message}</td></tr>`;
   }
+}
+
+function searchUsers(q) {
+  SearchManager.search('Users', q, loadUsers);
 }
 
 async function viewUser(id) {

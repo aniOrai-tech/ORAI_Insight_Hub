@@ -18,6 +18,7 @@ async function renderUpsell(container) {
         <div class="section-sub">Track deals, upload proposals, and manage client versions</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search deals..." data-module="Upsells" oninput="SearchManager.search('Upsells', this.value, loadUpsell)" style="width:240px" />
         <button class="btn btn-primary" onclick="openUpsellForm()">
           ${iconPlus()} Add Deal
         </button>
@@ -40,7 +41,7 @@ async function renderUpsell(container) {
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody id="upsell-tbody"><tr><td colspan="7"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
+          <tbody id="upsell-list"><tr><td colspan="7"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
         </table>
       </div>
     </div>`;
@@ -48,12 +49,28 @@ async function renderUpsell(container) {
   await loadUpsell();
 }
 
-async function loadUpsell() {
-  const res = await api.upsell.list();
-  if (!res.ok) return;
-  upsellData = res.data.data;
-  renderUpsellStats(upsellData);
-  renderUpsellTable(upsellData);
+let upsellDebounce = null;
+function searchUpsell(q) {
+  SearchManager.search('Upsells', q, loadUpsell);
+}
+
+async function loadUpsell(options = {}) {
+  const res = await api.upsell.list(options);
+  const tbody = document.getElementById('upsell-list');
+  if (!tbody) return;
+
+  if (res.ok) {
+    upsellData = res.data.data;
+    renderUpsellStats(upsellData);
+    if (upsellData.length === 0 && options.search) {
+      SearchManager.renderEmptyState('Upsells', 'upsell-list');
+    } else {
+      renderUpsellTable(upsellData);
+    }
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="7" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 function renderUpsellStats(data) {
@@ -71,8 +88,13 @@ function renderUpsellStats(data) {
 }
 
 function renderUpsellTable(data) {
-  const tbody = document.getElementById('upsell-tbody');
+  const tbody = document.getElementById('upsell-list');
   if (!tbody) return;
+  
+  if (!data.length) {
+    SearchManager.renderEmptyState('Upsells', 'upsell-list');
+    return;
+  }
   
   tbody.innerHTML = data.map(u => {
     const hasLinkedProposal = !!u.linkedProposalId;

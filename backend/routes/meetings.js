@@ -8,6 +8,7 @@ const { protect } = require('../middleware/auth');
 router.use(protect);
 
 router.get('/', ctrl.getMeetings);
+router.get('/sync-status', ctrl.getSyncStatus);
 router.get('/:id', ctrl.getMeetingById);
 router.post('/', upload.single('recording'), ctrl.createMeeting);
 router.put('/:id', upload.single('recording'), ctrl.updateMeeting);

@@ -3,12 +3,12 @@
  * Authentication, routing, navigation, utilities
  */
 
-// ─── State ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 window.currentUser = null;
 window.currentPage = 'dashboard';
 let sidebarCollapsed = false;
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initClock();
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// ─── Auth ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function checkAuth() {
   const token = localStorage.getItem('orai_token');
   const userData = localStorage.getItem('orai_user');
@@ -101,7 +101,7 @@ async function handleLogin(e) {
   }
 }
 
-// ─── OTP Verification ─────────────────────────────────────────────────────────
+// â”€â”€â”€ OTP Verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 document.getElementById('otp-form').addEventListener('submit', handleVerifyOTP);
 
@@ -174,7 +174,7 @@ function showDashboard() {
   initDashboard();
 }
 
-// ─── Dashboard Init ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Dashboard Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function initDashboard() {
   if (!currentUser) return;
 
@@ -195,7 +195,7 @@ function initDashboard() {
   }
 }
 
-// ─── Navigation Builder ────────────────────────────────────────────────────────
+// â”€â”€â”€ Navigation Builder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function buildNav() {
   if (window.LayoutManager) {
     LayoutManager.renderSidebar();
@@ -205,6 +205,12 @@ function buildNav() {
 function navigateTo(page) {
   console.log(`[NAVIGATE] Attempting navigation to: ${page}`);
   window.currentPage = page;
+  
+  const isSupportDesk = page === 'tickets' || page.startsWith('desk-');
+  const subnav = document.getElementById('topbar-subnav');
+  if (subnav && !isSupportDesk) {
+    subnav.innerHTML = '';
+  }
   
   const titleEl = document.getElementById('page-title');
   if (titleEl) {
@@ -241,6 +247,14 @@ function navigateTo(page) {
     case 'tickets':      if(typeof renderTickets === 'function') renderTickets(area); break;
     case 'finance':      if(typeof renderFinanceHome === 'function') renderFinanceHome(area); break;
     case 'admin':        if(typeof renderAdmin === 'function') renderAdmin(area); break;
+    case 'daily-tasks':  
+      console.log('[ROUTER] Navigating to Daily Tasks...');
+      if(typeof renderDailyTasks === 'function') {
+        renderDailyTasks(area); 
+      } else {
+        console.error('[ROUTER] renderDailyTasks is NOT a function!');
+      }
+      break;
     case 'profile':      if(typeof renderProfile === 'function') renderProfile(area); break;
     case 'desk-hq':      if(typeof renderDeskHQ === 'function') renderDeskHQ(area); break;
     case 'desk-queue':   if(typeof renderDeskQueue === 'function') renderDeskQueue(area); break;
@@ -265,6 +279,7 @@ const pageTitles = {
   tickets: 'Support Desk',
   finance: 'Finance & Accounts',
   admin: 'Admin Control Panel',
+  'daily-tasks': 'Daily Task Update',
   profile: 'My Profile',
   'desk-hq': 'Headquarters',
   'desk-queue': 'My Workplace',
@@ -275,7 +290,7 @@ const pageTitles = {
   'books-payments': 'Payments Received'
 };
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const isMobile = window.innerWidth <= 768;
@@ -288,7 +303,14 @@ function toggleSidebar() {
   }
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────────
+function toggleSidebarUserPanel() {
+  const panel = document.getElementById('sidebar-user-panel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+  }
+}
+
+// â”€â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openModal(title, bodyHTML) {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = bodyHTML;
@@ -298,6 +320,8 @@ function openModal(title, bodyHTML) {
 function closeModal() {
   document.getElementById('modal-overlay').classList.add('hidden');
   document.getElementById('modal-body').innerHTML = '';
+  // Dispatch event for components to cleanup (e.g. AddTaskModal unsubscribe)
+  window.dispatchEvent(new CustomEvent('modalClosed'));
 }
 
 // Close modal on overlay click
@@ -305,7 +329,7 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
   if (e.target === document.getElementById('modal-overlay')) closeModal();
 });
 
-// ─── Toast ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toast(message, type = 'success', duration = 3500) {
   const container = document.getElementById('toast-container');
   const icons = {
@@ -327,7 +351,7 @@ function toast(message, type = 'success', duration = 3500) {
   }, duration);
 }
 
-// ─── Clock ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function initClock() {
   const el = document.getElementById('topbar-time');
   if (!el) return;
@@ -339,7 +363,7 @@ function initClock() {
   setInterval(tick, 1000);
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Voice Search
 function startVoiceSearch() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -422,7 +446,7 @@ function daysUntil(date) {
 function expiryBadge(expiryDate) {
   const days = daysUntil(expiryDate);
   if (days < 0) return `<span class="badge badge-red">Expired</span>`;
-  if (days <= 7) return `<span class="badge badge-yellow">⚠ ${days}d left</span>`;
+  if (days <= 7) return `<span class="badge badge-yellow">âš  ${days}d left</span>`;
   return `<span class="badge badge-green">${days}d left</span>`;
 }
 
@@ -449,7 +473,41 @@ function truncate(str, len = 50) {
   return str.length > len ? str.slice(0, len) + '…' : str;
 }
 
-// ─── Excel Import ─────────────────────────────────────────────────────────────
+/**
+ * Universal CSV Export
+ */
+function exportToCSV(filename, data) {
+  if (!data || !data.length) {
+    toast('No data to export', 'warning');
+    return;
+  }
+
+  const headers = Object.keys(data[0]).filter(k => !k.startsWith('_') && typeof data[0][k] !== 'object');
+  const rows = data.map(obj => 
+    headers.map(h => {
+      let val = obj[h] === null || obj[h] === undefined ? '' : obj[h];
+      val = String(val).replace(/"/g, '""');
+      return `"${val}"`;
+    }).join(',')
+  );
+
+  const csvContent = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast('Export complete', 'success');
+  }
+}
+
+// â”€â”€â”€ Excel Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function openImportModal(moduleName) {
   const html = `
     <div style="padding:10px 0">
@@ -524,7 +582,7 @@ async function handleImportExcel(moduleName) {
   }
 }
 
-// ─── Filter Toggle ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Filter Toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let filtersVisible = false; // Default to hidden for cleaner look
 function toggleAllFilterIcons() {
   filtersVisible = !filtersVisible;
@@ -539,7 +597,7 @@ function toggleAllFilterIcons() {
   });
 }
 
-// ─── Excel Style Filter Logic ──────────────────────────────────────────────────
+// â”€â”€â”€ Excel Style Filter Logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 let activeFilterDropdown = null;
 
 function toggleExcelFilter(btn, options) {
@@ -599,7 +657,7 @@ function toggleExcelFilter(btn, options) {
     </div>
     <div class="filter-search">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search..." oninput="filterExcelList(this)">
+      <input type="text" placeholder="Search..." oninput="filterExcelList(this)" autofocus>
     </div>
     <div class="filter-list">
       <label class="filter-item">
@@ -619,6 +677,8 @@ function toggleExcelFilter(btn, options) {
 
   setTimeout(() => {
     window.addEventListener('click', closeExcelFilterOnClickOutside);
+    const searchInput = dropdown.querySelector('input[type="text"]');
+    if (searchInput) searchInput.focus();
   }, 0);
 }
 
@@ -692,7 +752,7 @@ function confirmDelete(name, onConfirm) {
   openModal('Confirm Delete', html);
 }
 
-// ─── Theming ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Theming â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function initTheme() {
   const savedTheme = localStorage.getItem('orai-theme') || 'dark';
   setTheme(savedTheme, false);
@@ -723,3 +783,17 @@ document.addEventListener('click', (e) => {
     menu.classList.add('hidden');
   }
 });
+
+// â”€â”€â”€ Global Keyboard Shortcuts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+window.addEventListener('keydown', (e) => {
+  if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) {
+    e.preventDefault();
+    const searchInput = document.querySelector('.table-actions .search-input, .search-input, .filter-search input');
+    if (searchInput) {
+      searchInput.focus();
+      searchInput.select();
+    }
+  }
+});
+
+console.log('[APP INITIALIZED]');

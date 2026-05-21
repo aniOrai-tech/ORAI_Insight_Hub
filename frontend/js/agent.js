@@ -42,7 +42,7 @@ function initAgent() {
   widget.innerHTML = `
     <div id="agent-popup" class="agent-popup-bubble">
       <span>Please connect for quick help</span>
-      <button class="popup-close" onclick="closeAgentPopup()">×</button>
+      <button class="popup-close" onclick="closeAgentPopup()">Ã—</button>
     </div>
     <div id="agent-chat-window" class="hidden">
       <div class="agent-header">

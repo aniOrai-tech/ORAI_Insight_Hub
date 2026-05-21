@@ -1,7 +1,18 @@
 const Meeting = require('../models/Meeting');
-const { fetchTeamsMeetings, fetchTranscript, fetchAllRecordings, fetchDailyCalendarEvents } = require('../utils/teamsHelper');
+const { 
+  fetchTeamsMeetings, 
+  fetchTranscript, 
+  fetchAllRecordings, 
+  fetchDailyCalendarEvents,
+  fetchMeetingRecordings 
+} = require('../utils/teamsHelper');
 const { summarizeMeeting } = require('../utils/claudeHelper');
 const { sendExpiryReminders } = require('../utils/emailService');
+const teamsAuth = require('../utils/teamsAuth');
+
+exports.getSyncStatus = async (req, res) => {
+  res.json({ success: true, authenticated: teamsAuth.isAuthenticated() });
+};
 
 // ─── GET ALL: Paginated and Filtered ──────────────────────────────────────────
 exports.getMeetings = async (req, res, next) => {
@@ -217,6 +228,22 @@ exports.syncFromTeams = async (req, res, next) => {
             updated++;
           } else {
             skipped++;
+          }
+        }
+
+        // Proactive Enrichment: If we have a joinUrl, try to find a recording/transcript immediately
+        if (meeting && meeting.joinUrl && !meeting.recordingUrl) {
+          const recordingData = await fetchMeetingRecordings(meeting._fetchedForUser || ev._fetchedForUser, meeting.joinUrl);
+          if (recordingData && recordingData.recordingContentUrl) {
+            meeting.recordingUrl = recordingData.recordingContentUrl;
+            meeting.teamsId = recordingData.recordingId;
+            // Also try to get transcript if meetingId is available
+            if (recordingData.meetingId) {
+              const transcript = await fetchTranscript(recordingData.meetingId);
+              if (transcript) meeting.transcript = transcript;
+            }
+            await meeting.save();
+            console.log(`[SYNC ENRICH] Found recording for: ${meeting.title}`);
           }
         }
       } catch (evErr) {

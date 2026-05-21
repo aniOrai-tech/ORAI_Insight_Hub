@@ -17,9 +17,14 @@ async function renderRequirements(container) {
         <div class="section-sub">Track client requests and feature requirements</div>
       </div>
       <div class="header-actions">
+        <input type="text" class="search-input" placeholder="Search requirements..." data-module="Requirements" oninput="SearchManager.search('Requirements', this.value, loadRequirements)" style="width:240px" />
         <button class="btn btn-ghost" onclick="toggleAllFilterIcons()" title="Show/Hide Table Filters">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg>
           <span>Filters</span>
+        </button>
+        <button class="btn btn-ghost" onclick="exportToCSV('Requirements', requirementsData)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Export</span>
         </button>
         <button class="btn btn-primary" onclick="openRequirementForm()">
           ${iconPlus()} Add Requirement
@@ -38,12 +43,13 @@ async function renderRequirements(container) {
               <th><div class="th-content"><span>Priority</span><button class="filter-trigger" onclick="openRequirementColumnFilter(this, 'priority')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th><div class="th-content"><span>Status</span><button class="filter-trigger" onclick="openRequirementColumnFilter(this, 'status')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th>Recording</th>
-              <th>Date</th>
+              <th><div class="th-content"><span>Client Name</span><button class="filter-trigger" onclick="openRequirementColumnFilter(this, 'clientId')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
+              <th><div class="th-content"><span>Time Invested</span><button class="filter-trigger" onclick="openRequirementColumnFilter(this, 'timeInvested')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 3H2l8 9v6l4 2v-8L22 3z"/></svg></button></div></th>
               <th>Actions</th>
             </tr>
           </thead>
 
-          <tbody id="req-tbody"><tr><td colspan="8"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
+          <tbody id="requirements-list"><tr><td colspan="9"><div class="empty-table"><p>Loading...</p></div></td></tr></tbody>
         </table>
       </div>
     </div>`;
@@ -51,13 +57,29 @@ async function renderRequirements(container) {
   await loadRequirements();
 }
 
+let reqDebounce = null;
+function searchRequirements(q) {
+  SearchManager.search('Requirements', q, loadRequirements);
+}
+
 let reqFilters = {};
-async function loadRequirements(params = {}) {
-  reqFilters = { ...reqFilters, ...params };
+async function loadRequirements(options = {}) {
+  reqFilters = { ...reqFilters, ...options };
   const res = await api.requirements.list(reqFilters);
-  if (!res.ok) { toast('Failed to load requirements', 'error'); return; }
-  requirementsData = res.data.data;
-  renderReqTable(requirementsData);
+  const tbody = document.getElementById('requirements-list');
+  if (!tbody) return;
+
+  if (res.ok) {
+    requirementsData = res.data.data;
+    if (requirementsData.length === 0 && reqFilters.search) {
+      SearchManager.renderEmptyState('Requirements', 'requirements-list');
+    } else {
+      renderReqTable(requirementsData);
+    }
+  } else {
+    if (res.data && res.data.message === 'Request aborted') return;
+    tbody.innerHTML = `<tr><td colspan="9" class="error-state">Error: ${res.data.message}</td></tr>`;
+  }
 }
 
 function filterRequirements(key, val) {
@@ -68,23 +90,22 @@ function filterRequirements(key, val) {
 const priorityColors = { urgent: 'badge-red', high: 'badge-yellow', medium: 'badge-blue', low: 'badge-gray' };
 
 function renderReqTable(data) {
-  const tbody = document.getElementById('req-tbody');
+  const tbody = document.getElementById('requirements-list');
   if (!tbody) return;
   if (!data.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-table">${iconClipboard()}<p>No requirements found.</p></div></td></tr>`;
+    SearchManager.renderEmptyState('Requirements', 'requirements-list');
     return;
   }
   tbody.innerHTML = data.map(r => `
     <tr>
       <td style="font-weight:600;color:var(--text-primary)">${r.accountName}</td>
-      <td>${r.accountManagerName}</td>
-      <td style="max-width:220px">${truncate(r.usecaseSummary, 55)}</td>
+      <td>${r.accountManagerName || '—'}</td>
+      <td style="max-width:180px" title="${(r.usecaseSummary || '').replace(/"/g, '&quot;')}">${truncate(r.usecaseSummary, 45)}</td>
       <td><span class="badge ${priorityColors[r.priority]||'badge-gray'}">${r.priority}</span></td>
       <td>${statusBadge(r.status)}</td>
-      <td>${r.recording?.filename
-        ? `<a href="/uploads/recordings/${r.recording.filename}" target="_blank" class="btn btn-ghost btn-sm">🎙 Play</a>`
-        : '<span style="color:var(--text-muted);font-size:0.8rem">None</span>'}</td>
-      <td>${formatDate(r.createdAt)}</td>
+      <td>${r.recording ? `<a href="/uploads/recordings/${r.recording.filename}" target="_blank" class="btn btn-secondary btn-xs" style="padding: 2px 6px; font-size: 0.75rem; border-radius: 4px;" title="Play ${r.recording.originalName}">🎙 Play</a>` : '—'}</td>
+      <td><strong>${r.clientId ? r.clientId.companyName : '—'}</strong></td>
+      <td class="td-mono">${r.timeInvested || '—'}</td>
       <td>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-icon" onclick="viewRequirement('${r._id}')">${iconEye()}</button>
@@ -92,7 +113,8 @@ function renderReqTable(data) {
           <button class="btn btn-ghost btn-icon" style="color:var(--red)" onclick="deleteReqConfirm('${r._id}','${r.accountName.replace(/'/g,"\\'")}')"> ${iconTrash()}</button>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>
+  `).join('');
 }
 
 function openRequirementForm(req = null) {
@@ -125,6 +147,17 @@ function openRequirementForm(req = null) {
           </select>
         </div>
         <div class="field">
+          <label>Linked Client *</label>
+          <select name="clientId" required>
+            <option value="">Select Client</option>
+            ${(window.clientsData || []).map(c => `<option value="${c._id}" ${isEdit && req.clientId && (req.clientId._id || req.clientId) === c._id ? 'selected' : ''}>${c.companyName}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>Time Invested</label>
+          <input type="text" name="timeInvested" placeholder="e.g. 2h 30m" value="${isEdit ? (req.timeInvested || '') : ''}" />
+        </div>
+        <div class="field">
           <label>Est. Completion Date</label>
           <input type="date" name="estimatedCompletionDate" value="${isEdit && req.estimatedCompletionDate ? req.estimatedCompletionDate.split('T')[0] : ''}" />
         </div>
@@ -154,7 +187,12 @@ async function saveRequirement(e, reqId) {
   const fd = new FormData(e.target);
   const btn = e.target.querySelector('[type="submit"]');
   btn.disabled = true; btn.textContent = 'Saving...';
-  const res = reqId ? await api.requirements.update(reqId, Object.fromEntries(fd)) : await api.requirements.create(fd);
+  
+  // Use upload API if recording is present, otherwise standard post/put
+  const res = reqId 
+    ? await api.requirements.update(reqId, fd) 
+    : await api.requirements.create(fd);
+
   btn.disabled = false;
   if (res.ok) { closeModal(); toast(reqId ? 'Updated!' : 'Requirement added!', 'success'); await loadRequirements(); }
   else toast(res.data.message || 'Failed to save', 'error');
@@ -197,9 +235,14 @@ function deleteReqConfirm(id, name) {
   });
 }
 
-// ─── Filtering ────────────────────────────────────────────────────────────────
+// ─── Filtering ────────────────────────────────────────────────
 function openRequirementColumnFilter(btn, column) {
-  const values = [...new Set(requirementsData.map(r => r[column]).filter(v => v !== null && v !== undefined))].sort();
+  let values;
+  if (column === 'clientId') {
+    values = [...new Set(requirementsData.map(r => r.clientId ? r.clientId.companyName : null).filter(v => v !== null && v !== undefined))].sort();
+  } else {
+    values = [...new Set(requirementsData.map(r => r[column]).filter(v => v !== null && v !== undefined))].sort();
+  }
   toggleExcelFilter(btn, {
     module: 'Requirements',
     column: column,
@@ -213,7 +256,12 @@ window.applyRequirementsFilter = function(column, selectedValues) {
     return Object.keys(reqFilters).every(col => {
       const selected = reqFilters[col];
       if (!selected || selected.length === 0 || !Array.isArray(selected)) return true;
-      const val = r[col];
+      let val;
+      if (col === 'clientId') {
+        val = r.clientId ? r.clientId.companyName : '';
+      } else {
+        val = r[col];
+      }
       return selected.some(s => String(s) === String(val));
     });
   });

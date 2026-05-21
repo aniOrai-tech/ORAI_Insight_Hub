@@ -7,6 +7,14 @@
 .layout-desk .sidebar { background: var(--bg-surface); border-right: 1px solid var(--border); }
 .layout-books .sidebar { background: var(--bg-surface); border-right: 1px solid var(--border); }
 
+/* Layout overrides to remove content-area padding and double scrollbar */
+.layout-desk .content-area {
+  padding: 0 !important;
+  overflow: hidden !important;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Sidebar Navigation Upgrades */
 .nav-badge {
   background: var(--accent);

@@ -91,6 +91,10 @@ const clientSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  legalName: {
+    type: String,
+    trim: true
+  },
   accountId: {
     type: String,
     trim: true
@@ -198,6 +202,15 @@ const requirementSchema = new mongoose.Schema({
     required: [true, 'Account manager name is required'],
     trim: true
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    index: true
+  },
+  timeInvested: {
+    type: String, // format: "2h 30m"
+    trim: true
+  },
   usecaseSummary: {
     type: String,
     required: [true, 'Usecase summary is required']
@@ -245,5 +258,7 @@ module.exports = {
   Bot: mongoose.model('Bot', botSchema),
   Client: mongoose.model('Client', clientSchema),
   Upsell: mongoose.model('Upsell', upsellSchema),
-  Requirement: mongoose.model('Requirement', requirementSchema)
+  Requirement: mongoose.model('Requirement', requirementSchema),
+  Member: require('./Member'),
+  DailyTask: require('./DailyTask')
 };
